@@ -39,12 +39,12 @@ interface BandejaComprobantesProps {
   onNotify: (msg: string, tone?: 'success' | 'error' | 'info') => void;
 }
 
-const ESTADO_STYLE: Record<EstadoComprobante, string> = {
-  PENDIENTE: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
-  EN_PROCESO: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-  EMITIDO: 'bg-indigo-500/15 text-indigo-300 border-indigo-500/30',
-  ARCHIVADO: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  ANULADO: 'bg-rose-500/15 text-rose-300 border-rose-500/30',
+const ESTADO_CLASS: Record<EstadoComprobante, string> = {
+  PENDIENTE: 'fs-pill-peach',
+  EN_PROCESO: 'fs-pill-sky',
+  EMITIDO: 'fs-pill-accent',
+  ARCHIVADO: 'fs-pill-sage',
+  ANULADO: 'fs-pill-rose',
 };
 
 export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
@@ -133,7 +133,7 @@ export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
       items: r.items.map((it) => ({ ...it, afectacion: nuevaTasa === 0 ? '20' : '10' })),
       actualizadoEn: new Date().toISOString(),
     }));
-    onNotify(`Tasa IGV cambiada a ${nuevaTasa}% en ${selectedIds.length} comprobantes.`, 'success');
+    onNotify(`Tasa IGV actualizada a ${nuevaTasa}% en ${selectedIds.length} comprobante(s).`, 'success');
   };
 
   const handleBulkModo = (modo: ModoCalculoIGV) => {
@@ -143,7 +143,7 @@ export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
       modoCalculo: modo,
       actualizadoEn: new Date().toISOString(),
     }));
-    onNotify(`Modo de cálculo actualizado en ${selectedIds.length} comprobantes.`, 'success');
+    onNotify(`Modo de cálculo actualizado en ${selectedIds.length} comprobante(s).`, 'success');
   };
 
   const handleBulkFechaHoy = () => {
@@ -154,12 +154,12 @@ export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
       fechaEmisionSunat: hoy,
       actualizadoEn: new Date().toISOString(),
     }));
-    onNotify(`Fecha de Emisión SUNAT ajustada a hoy (${hoy}) en ${selectedIds.length} registros.`, 'success');
+    onNotify(`Fecha de Emisión SUNAT ajustada a ${hoy} en ${selectedIds.length} registro(s).`, 'success');
   };
 
   const handleConsolidar = () => {
     if (selectedIds.length < 2) {
-      onNotify('Selecciona al menos 2 notas para consolidarlas en 1 sola factura o boleta.', 'info');
+      onNotify('Selecciona al menos 2 registros para consolidarlos en 1 comprobante.', 'info');
       return;
     }
     onConsolidate(selectedIds);
@@ -169,8 +169,7 @@ export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
   const handleDownloadXml = (rec: ComprobanteRecord) => {
     const xml = generateUbl21Xml(rec, config);
     const blob = new Blob([xml], { type: 'application/xml;charset=utf-8' });
-    const name = `${rec.serieSunat || 'DOC'}-${rec.numeroSunat || rec.notaInterna}.xml`;
-    triggerDownload(blob, name);
+    triggerDownload(blob, `${rec.serieSunat || 'DOC'}-${rec.numeroSunat || rec.notaInterna}.xml`);
   };
 
   const handleDownloadDraftPdf = (rec: ComprobanteRecord) => {
@@ -180,68 +179,70 @@ export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
 
   return (
     <div className="space-y-5">
-      {/* Cabecera + Verificador de Cuadre Físico vs Sistema */}
+      {/* Filtros + Verificador de Cuadre */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
-        <div className="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        <div className="lg:col-span-7 fs-card p-4 flex flex-wrap items-center gap-2.5">
+          <div className="relative flex-1 min-w-[190px]">
+            <Search className="w-4 h-4 text-[var(--text-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar nota, RUC, empresa, serie o concepto..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-sm text-white focus:border-amber-400 focus:outline-none"
+              placeholder="Buscar nota, RUC, cliente, serie..."
+              className="fs-input w-full pl-9 pr-3 py-2 text-xs"
             />
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-500 hidden sm:block" />
+            <Filter className="w-4 h-4 text-[var(--text-muted)] hidden sm:block" />
             <select
               value={filterTipo}
               onChange={(e) => setFilterTipo(e.target.value)}
-              className="px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200"
+              className="fs-input px-2.5 py-2 text-xs"
             >
               <option value="ALL">Todos los tipos</option>
-              <option value="01">Solo Facturas</option>
-              <option value="03">Solo Boletas</option>
+              <option value="01">Facturas</option>
+              <option value="03">Boletas</option>
               <option value="07">Notas Crédito</option>
             </select>
 
             <select
               value={filterEstado}
               onChange={(e) => setFilterEstado(e.target.value)}
-              className="px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200"
+              className="fs-input px-2.5 py-2 text-xs"
             >
               <option value="ALL">Todos los estados</option>
               <option value="PENDIENTE">Pendientes</option>
-              <option value="EMITIDO">Emitidos SUNAT</option>
-              <option value="ARCHIVADO">Con PDF Archivado</option>
+              <option value="EMITIDO">Emitidos</option>
+              <option value="ARCHIVADO">Con PDF</option>
               <option value="ANULADO">Anulados</option>
             </select>
 
             <select
               value={filterMes}
               onChange={(e) => setFilterMes(e.target.value)}
-              className="px-2.5 py-2 rounded-xl bg-slate-950 border border-slate-700 text-xs text-slate-200"
+              className="fs-input px-2.5 py-2 text-xs"
             >
               <option value="ALL">Todos los meses</option>
               {mesesDisponibles.map((m) => (
                 <option key={m} value={m}>
-                  Mes {m}
+                  Periodo {m}
                 </option>
               ))}
             </select>
           </div>
         </div>
 
-        {/* Cuadre Rápido contra las boletas físicas en papel */}
-        <div className="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Scale className="w-5 h-5 text-amber-400 shrink-0" />
+        <div className="lg:col-span-5 fs-card p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <Scale className="w-5 h-5 shrink-0" style={{ color: 'var(--accent-text)' }} />
             <div>
-              <div className="text-xs font-bold text-white">Cuadre vs Boletas Físicas</div>
-              <div className="text-[11px] text-slate-400">
-                Sistema: <strong className="text-emerald-300 font-mono-num">S/ {formatFixed(totalesFiltrados.total)}</strong>
+              <div className="text-xs font-bold text-[var(--text-primary)]">Cuadre vs Documentos Físicos</div>
+              <div className="text-[11px] text-[var(--text-muted)]">
+                Sistema:{' '}
+                <strong className="font-mono-num" style={{ color: 'var(--sage-text)' }}>
+                  S/ {formatFixed(totalesFiltrados.total)}
+                </strong>
               </div>
             </div>
           </div>
@@ -251,15 +252,13 @@ export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
               step="0.01"
               value={totalFisicoPapel}
               onChange={(e) => setTotalFisicoPapel(e.target.value)}
-              placeholder="Suma papel S/"
-              className="w-32 px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-sm font-mono-num text-white text-right focus:border-amber-400 focus:outline-none"
+              placeholder="Total físico S/"
+              className="fs-input w-32 px-3 py-1.5 text-xs font-mono-num text-right"
             />
             {diffFisico !== null && (
               <span
                 className={`text-xs font-bold px-2.5 py-1.5 rounded-xl font-mono-num ${
-                  Math.abs(diffFisico) < 0.005
-                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                  Math.abs(diffFisico) < 0.005 ? 'fs-pill-sage' : 'fs-pill-rose'
                 }`}
               >
                 {Math.abs(diffFisico) < 0.005
@@ -271,66 +270,56 @@ export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
         </div>
       </div>
 
-      {/* Barra de Acciones Masivas cuando hay seleccionados */}
+      {/* Acciones en Lote */}
       {selectedIds.length > 0 && (
-        <div className="bg-amber-500/10 border border-amber-500/40 rounded-2xl p-3.5 flex flex-wrap items-center justify-between gap-3">
-          <span className="text-sm font-bold text-amber-200">
-            {selectedIds.length} comprobante(s) seleccionado(s):
-          </span>
+        <div className="p-3.5 rounded-2xl fs-pill-accent flex flex-wrap items-center justify-between gap-3">
+          <span className="text-xs font-extrabold">{selectedIds.length} comprobante(s) seleccionado(s):</span>
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={handleConsolidar}
-              className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1.5"
+              className="fs-btn-primary px-3 py-1.5 text-xs flex items-center gap-1.5"
             >
               <Layers className="w-3.5 h-3.5" />
-              Consolidar en 1 Comprobante
+              Consolidar en 1
             </button>
             <button
               type="button"
               onClick={handleBulkFechaHoy}
-              className="px-3 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 border border-emerald-500/40 text-xs font-semibold flex items-center gap-1"
+              className="cursor-pointer px-3 py-1.5 rounded-lg fs-pill-sage text-xs font-bold flex items-center gap-1"
             >
               <CalendarCheck className="w-3.5 h-3.5" />
               F. Emisión = Hoy
             </button>
-            <button
-              type="button"
-              onClick={() => handleBulkTasa(18)}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
-            >
-              Pasar a 18%
+            <button type="button" onClick={() => handleBulkTasa(18)} className="fs-btn-soft px-2.5 py-1.5 text-xs">
+              IGV 18%
             </button>
-            <button
-              type="button"
-              onClick={() => handleBulkTasa(10.5)}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
-            >
-              Pasar a 10.5%
+            <button type="button" onClick={() => handleBulkTasa(10.5)} className="fs-btn-soft px-2.5 py-1.5 text-xs">
+              IGV 10.5%
             </button>
             <button
               type="button"
               onClick={() => handleBulkModo('INCLUYE_IGV')}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
+              className="fs-btn-soft px-2.5 py-1.5 text-xs"
             >
-              Mantener Total
+              IGV Incluido
             </button>
             <button
               type="button"
               onClick={() => handleBulkModo('MAS_IGV')}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold"
+              className="fs-btn-soft px-2.5 py-1.5 text-xs"
             >
               Neto + IGV
             </button>
             <button
               type="button"
               onClick={() => {
-                if (confirm(`¿Eliminar ${selectedIds.length} comprobante(s) seleccionado(s)?`)) {
+                if (confirm(`¿Eliminar ${selectedIds.length} registro(s) seleccionado(s)?`)) {
                   onDeleteMany(selectedIds);
                   setSelectedIds([]);
                 }
               }}
-              className="px-2.5 py-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1"
+              className="cursor-pointer px-2.5 py-1.5 rounded-lg fs-pill-rose text-xs font-bold flex items-center gap-1"
             >
               <Trash2 className="w-3.5 h-3.5" />
               Eliminar
@@ -340,34 +329,34 @@ export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
       )}
 
       {/* Tabla Maestra */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl overflow-hidden">
+      <div className="fs-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider border-b border-slate-800">
+            <thead className="bg-[var(--bg-inset)] text-[var(--text-muted)] uppercase tracking-wider border-b border-[var(--border-soft)]">
               <tr>
-                <th className="p-3 w-8">
+                <th className="p-2.5 w-8">
                   <input
                     type="checkbox"
                     checked={filtrados.length > 0 && selectedIds.length === filtrados.length}
                     onChange={toggleSelectAll}
-                    className="accent-amber-500"
+                    className="accent-[var(--accent-bg)]"
                   />
                 </th>
-                <th className="p-2.5">Nota / Fechas</th>
+                <th className="p-2.5">Ref / Fechas</th>
                 <th className="p-2.5">Tipo / Serie</th>
-                <th className="p-2.5">Cliente / RUC-DNI</th>
-                <th className="p-2.5 text-right">Val. Unit. SOL</th>
+                <th className="p-2.5">Cliente / Documento</th>
+                <th className="p-2.5 text-right">V.U. SUNAT</th>
                 <th className="p-2.5 text-right">Base / IGV</th>
                 <th className="p-2.5 text-right">Total</th>
                 <th className="p-2.5">Estado</th>
                 <th className="p-2.5 text-right">Acciones</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/80">
+            <tbody className="divide-y divide-[var(--border-soft)]">
               {filtrados.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-10 text-center text-slate-400">
-                    No hay comprobantes que coincidan con los filtros. Ingresa notas en <strong>Captura Rápida</strong> o carga datos de ejemplo.
+                  <td colSpan={9} className="p-10 text-center text-[var(--text-muted)]">
+                    No hay comprobantes registrados. Agrega notas en <strong>Registro de Notas</strong> o desde <strong>Calculadora IGV</strong>.
                   </td>
                 </tr>
               ) : (
@@ -381,29 +370,30 @@ export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
                   return (
                     <tr
                       key={rec.id}
-                      className={`hover:bg-slate-800/40 transition ${isSel ? 'bg-amber-500/5' : ''}`}
+                      className="hover:bg-[var(--bg-hover)] transition"
+                      style={isSel ? { backgroundColor: 'var(--accent-soft)' } : undefined}
                     >
                       <td className="p-2.5">
                         <input
                           type="checkbox"
                           checked={isSel}
                           onChange={() => toggleSelect(rec.id)}
-                          className="accent-amber-500"
+                          className="accent-[var(--accent-bg)]"
                         />
                       </td>
                       <td className="p-2.5 whitespace-nowrap">
-                        <div className="font-bold text-amber-300 font-mono-num">
+                        <div className="font-bold font-mono-num" style={{ color: 'var(--accent-text)' }}>
                           {rec.notaInterna || '-'}
                           {rec.notasConsolidadas && rec.notasConsolidadas.length > 1 && (
-                            <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300">
+                            <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded fs-pill-sky">
                               ×{rec.notasConsolidadas.length}
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-300 font-mono-num">
+                        <div className="text-[11px] text-[var(--text-secondary)] font-mono-num">
                           {rec.fechaConsumo}
                         </div>
-                        <div className="text-[10px] text-slate-500 font-mono-num">
+                        <div className="text-[10px] text-[var(--text-muted)] font-mono-num">
                           SOL: {rec.fechaEmisionSunat}
                         </div>
                       </td>
@@ -411,74 +401,79 @@ export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
                         <span
                           className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
                             rec.tipoComprobante === '01'
-                              ? 'bg-sky-500/20 text-sky-300'
+                              ? 'fs-pill-sky'
                               : rec.tipoComprobante === '03'
-                                ? 'bg-purple-500/20 text-purple-300'
-                                : 'bg-rose-500/20 text-rose-300'
+                                ? 'fs-pill-accent'
+                                : 'fs-pill-rose'
                           }`}
                         >
                           {getTipoNombreCorto(rec.tipoComprobante)}
                         </span>
-                        <div className="font-mono-num text-slate-200 mt-1 text-[11px]">
+                        <div className="font-mono-num text-[var(--text-primary)] mt-1 text-[11px]">
                           {rec.serieSunat && rec.numeroSunat
                             ? `${rec.serieSunat}-${rec.numeroSunat}`
                             : `${rec.serieSunat || 'E001'}-Pend.`}
                         </div>
                       </td>
                       <td className="p-2.5 max-w-[180px]">
-                        <div className="font-semibold text-white truncate" title={rec.razonSocialCliente}>
+                        <div className="font-bold text-[var(--text-primary)] truncate" title={rec.razonSocialCliente}>
                           {rec.razonSocialCliente || 'CLIENTES VARIOS'}
                         </div>
-                        <div className="text-[11px] text-slate-400 font-mono-num">
+                        <div className="text-[11px] text-[var(--text-muted)] font-mono-num">
                           {rec.numeroDocCliente || '-'}
                         </div>
-                        <div className="text-[10px] text-slate-500 truncate" title={rec.items[0]?.descripcion}>
+                        <div className="text-[10px] text-[var(--text-muted)] truncate">
                           {rec.items[0]?.descripcion} {rec.items.length > 1 ? `(+${rec.items.length - 1})` : ''}
                         </div>
                       </td>
                       <td className="p-2.5 text-right font-mono-num whitespace-nowrap">
-                        <div className="text-amber-300 font-semibold">
+                        <div className="font-bold" style={{ color: 'var(--accent-text)' }}>
                           {calc.items[0]?.valorUnitarioSunatStr}
                         </div>
-                        <div className="text-[10px] text-slate-500">
-                          {rec.modoCalculo === 'INCLUYE_IGV' ? 'Desgl.' : '+IGV'} {calc.tasaIgvPorcentaje}%
+                        <div className="text-[10px] text-[var(--text-muted)]">
+                          {rec.modoCalculo === 'INCLUYE_IGV' ? 'Incl.' : '+IGV'} {calc.tasaIgvPorcentaje}%
                         </div>
                       </td>
                       <td className="p-2.5 text-right font-mono-num whitespace-nowrap">
-                        <div className="text-slate-200">B: {formatFixed(calc.opGravada)}</div>
-                        <div className="text-[11px] text-sky-300">I: {formatFixed(calc.igvTotal)}</div>
+                        <div className="text-[var(--text-primary)]">B: {formatFixed(calc.opGravada)}</div>
+                        <div className="text-[11px]" style={{ color: 'var(--sky-text)' }}>
+                          I: {formatFixed(calc.igvTotal)}
+                        </div>
                       </td>
-                      <td className="p-2.5 text-right font-mono-num font-bold text-emerald-400 text-sm whitespace-nowrap">
+                      <td
+                        className="p-2.5 text-right font-mono-num font-extrabold text-sm whitespace-nowrap"
+                        style={{ color: 'var(--sage-text)' }}
+                      >
                         {formatMoney(calc.importeTotal, rec.moneda)}
                       </td>
                       <td className="p-2.5 whitespace-nowrap">
                         <div className="flex flex-col gap-1 items-start">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${ESTADO_STYLE[rec.estado]}`}
-                          >
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${ESTADO_CLASS[rec.estado]}`}>
                             {rec.estado}
                           </span>
                           {rec.pdfAdjunto?.esOficialSunat && (
-                            <span className="text-[10px] text-emerald-400 flex items-center gap-1">
+                            <span className="text-[10px] font-semibold flex items-center gap-1" style={{ color: 'var(--sage-text)' }}>
                               <Paperclip className="w-3 h-3" /> PDF
                             </span>
                           )}
                           {errCount > 0 ? (
                             <span
-                              className="text-[10px] text-rose-400 flex items-center gap-1 font-semibold"
+                              className="text-[10px] flex items-center gap-1 font-bold"
+                              style={{ color: 'var(--rose-text)' }}
                               title={alertas.map((a) => a.mensaje).join('\n')}
                             >
                               <AlertTriangle className="w-3 h-3" /> {errCount} err.
                             </span>
                           ) : warnCount > 0 ? (
                             <span
-                              className="text-[10px] text-amber-300 flex items-center gap-1"
+                              className="text-[10px] flex items-center gap-1 font-semibold"
+                              style={{ color: 'var(--peach-text)' }}
                               title={alertas.map((a) => a.mensaje).join('\n')}
                             >
                               <AlertTriangle className="w-3 h-3" /> {warnCount} av.
                             </span>
                           ) : (
-                            <span className="text-[10px] text-emerald-400/80 flex items-center gap-1">
+                            <span className="text-[10px] flex items-center gap-1" style={{ color: 'var(--sage-text)' }}>
                               <CheckCircle2 className="w-3 h-3" /> OK
                             </span>
                           )}
@@ -489,40 +484,40 @@ export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
                           <button
                             type="button"
                             onClick={() => onEmitSingle(rec.id)}
-                            className="p-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300"
-                            title="Abrir en Estación de Emisión SUNAT"
+                            className="cursor-pointer p-1.5 rounded-lg fs-pill-sage"
+                            title="Emitir en SUNAT"
                           >
                             <Rocket className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
                             onClick={() => onEdit(rec)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200"
-                            title="Editar comprobante"
+                            className="fs-btn-soft p-1.5"
+                            title="Editar"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
                             onClick={() => onDuplicate(rec)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300"
-                            title="Duplicar nota"
+                            className="fs-btn-soft p-1.5"
+                            title="Duplicar"
                           >
                             <Copy className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDownloadDraftPdf(rec)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-300"
-                            title="Descargar Hoja de Trabajo PDF"
+                            className="cursor-pointer p-1.5 rounded-lg fs-pill-peach"
+                            title="Hoja de trabajo PDF"
                           >
                             <FileDown className="w-3.5 h-3.5" />
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDownloadXml(rec)}
-                            className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300"
-                            title="Descargar XML UBL 2.1 SUNAT"
+                            className="cursor-pointer p-1.5 rounded-lg fs-pill-sky"
+                            title="XML UBL 2.1"
                           >
                             <Code2 className="w-3.5 h-3.5" />
                           </button>
@@ -534,16 +529,18 @@ export const BandejaComprobantes: React.FC<BandejaComprobantesProps> = ({
               )}
             </tbody>
             {filtrados.length > 0 && (
-              <tfoot className="bg-slate-950 border-t border-slate-800 font-bold text-xs">
+              <tfoot className="bg-[var(--bg-inset)] border-t border-[var(--border-soft)] font-bold text-xs">
                 <tr>
-                  <td colSpan={5} className="p-2.5 text-slate-300">
+                  <td colSpan={5} className="p-3 text-[var(--text-secondary)]">
                     TOTAL FILTRADO ({filtrados.filter((r) => r.estado !== 'ANULADO').length} activos)
                   </td>
-                  <td className="p-2.5 text-right font-mono-num">
-                    <div className="text-white">B: {formatFixed(totalesFiltrados.gravada)}</div>
-                    <div className="text-sky-300 text-[11px]">I: {formatFixed(totalesFiltrados.igv)}</div>
+                  <td className="p-3 text-right font-mono-num">
+                    <div className="text-[var(--text-primary)]">B: {formatFixed(totalesFiltrados.gravada)}</div>
+                    <div className="text-[11px]" style={{ color: 'var(--sky-text)' }}>
+                      I: {formatFixed(totalesFiltrados.igv)}
+                    </div>
                   </td>
-                  <td className="p-2.5 text-right font-mono-num text-emerald-400 text-sm">
+                  <td className="p-3 text-right font-mono-num text-sm" style={{ color: 'var(--sage-text)' }}>
                     S/ {formatFixed(totalesFiltrados.total)}
                   </td>
                   <td colSpan={2} />

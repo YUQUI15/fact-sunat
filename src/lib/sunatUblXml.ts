@@ -14,7 +14,7 @@ function escapeXml(str: string): string {
  * Construye la descripción final para SUNAT, agregando opcionalmente la fecha real de consumo y N° de nota.
  */
 export function buildDescripcionSunat(itemDesc: string, rec: ComprobanteRecord): string {
-  const base = (itemDesc || 'Consumo de Alimentos y Bebidas - Peña Show').trim();
+  const base = (itemDesc || 'Prestación de servicios / Consumo').trim();
   if (!rec.incluirRefFechaEnDesc) return base;
   const parts: string[] = [];
   if (rec.fechaConsumo) {
@@ -118,7 +118,7 @@ export function generateUbl21Xml(rec: ComprobanteRecord, emisor: EmpresaEmisoraC
         <cbc:ID schemeID="6">${escapeXml(emisor.ruc || '20000000001')}</cbc:ID>
       </cac:PartyIdentification>
       <cac:PartyLegalEntity>
-        <cbc:RegistrationName><![CDATA[${emisor.razonSocial || 'PEÑA SHOW TURÍSTICA'}]]></cbc:RegistrationName>
+        <cbc:RegistrationName><![CDATA[${emisor.razonSocial || 'MI EMPRESA S.A.C.'}]]></cbc:RegistrationName>
       </cac:PartyLegalEntity>
     </cac:Party>
   </cac:AccountingSupplierParty>
@@ -216,7 +216,7 @@ export function buildNubefactPayload(
     enviar_automaticamente_al_cliente: Boolean(rec.emailCliente),
     items: calc.items.map((it) => ({
       unidad_de_medida: it.unidad || 'ZZ',
-      codigo: it.codigo || 'SERV-PENA',
+      codigo: it.codigo || 'SERV-001',
       descripcion: buildDescripcionSunat(it.descripcion, rec),
       cantidad: it.cantidad,
       valor_unitario: Number(it.valorUnitarioSunatStr),

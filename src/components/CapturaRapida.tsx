@@ -14,7 +14,6 @@ import {
   Trash2,
   Upload,
   UserPlus,
-  Zap,
 } from 'lucide-react';
 import type {
   AfectacionIGV,
@@ -79,7 +78,6 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
   const [subMode, setSubMode] = useState<'INDIVIDUAL' | 'MASIVO'>('INDIVIDUAL');
   const hoy = useMemo(() => getHoyPeruISO(), []);
 
-  // Estado del formulario individual
   const [tipoComprobante, setTipoComprobante] = useState<TipoComprobante>('03');
   const [notaInterna, setNotaInterna] = useState<string>(() => getNextNotaInterna(comprobantes));
   const [fechaConsumo, setFechaConsumo] = useState<string>(hoy);
@@ -104,7 +102,7 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
     {
       id: crypto.randomUUID(),
       unidad: 'ZZ',
-      descripcion: config.conceptosRapidos[0] || 'Consumo de Alimentos y Bebidas - Peña Show',
+      descripcion: config.conceptosRapidos[0] || 'Consumo de Alimentos y Bebidas',
       cantidad: 1,
       montoIngresado: 0,
       esTotalLinea: true,
@@ -118,7 +116,6 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
 
   const montoInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Cargar registro en edición si el usuario hizo clic en "Editar" desde la Bandeja
   useEffect(() => {
     if (!editingRecord) return;
     setSubMode('INDIVIDUAL');
@@ -146,7 +143,6 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
     }
   }, [editingRecord]);
 
-  // Borrador en vivo para cálculos y alertas instantáneas
   const draftRecord: ComprobanteRecord = useMemo(
     () => ({
       id: editingRecord?.id || 'draft',
@@ -211,7 +207,6 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
     () => validarComprobanteSunat(draftRecord, comprobantes, hoy),
     [draftRecord, comprobantes, hoy]
   );
-
   const hasHardErrors = alertas.some((a) => a.nivel === 'error');
 
   const handleTipoChange = (nuevoTipo: TipoComprobante) => {
@@ -246,17 +241,15 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
       return;
     }
 
-    // 1. Buscar primero en Agenda local de Clientes Frecuentes
     const localMatch = clientes.find((c) => c.numeroDoc === clean);
     if (localMatch) {
       setRazonSocialCliente(localMatch.razonSocial);
       setDireccionCliente(localMatch.direccion || '');
       setEmailCliente(localMatch.email || '');
-      onNotify(`Cliente cargado desde tu Agenda local: ${localMatch.razonSocial}`, 'success');
+      onNotify(`Cliente cargado desde Directorio local: ${localMatch.razonSocial}`, 'success');
       return;
     }
 
-    // 2. Consultar endpoint serverless /api/consulta-doc
     setLookupLoading(true);
     try {
       const tipoParam = tipoDocCliente === '6' ? 'ruc' : 'dni';
@@ -269,13 +262,10 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
         if (data.direccion) setDireccionCliente(data.direccion);
         onNotify(`Encontrado (${data.source}): ${data.razonSocial}`, 'success');
       } else {
-        onNotify(data.error || 'No se pudo consultar en línea. Escribe el nombre manualmente.', 'error');
+        onNotify(data.error || 'No se pudo consultar en línea. Ingresa la razón social manualmente.', 'error');
       }
     } catch {
-      onNotify(
-        'Consulta en línea no disponible en modo local sin API. El RUC/DNI ya fue validado matemáticamente; escribe la razón social manualmente.',
-        'info'
-      );
+      onNotify('Consulta en línea no disponible. El documento fue validado localmente; ingresa el nombre manualmente.', 'info');
     } finally {
       setLookupLoading(false);
     }
@@ -292,12 +282,12 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
 
   const handleSaveCurrentClientToAgenda = () => {
     if (!razonSocialCliente.trim() || razonSocialCliente.trim().toUpperCase() === 'CLIENTES VARIOS') {
-      onNotify('Ingresa un nombre o razón social válido para guardar en la agenda.', 'error');
+      onNotify('Ingresa un nombre o razón social válido para guardar en el directorio.', 'error');
       return;
     }
     const existing = clientes.find((c) => c.numeroDoc === numeroDocCliente.trim() && numeroDocCliente.trim() !== '-');
     if (existing) {
-      onNotify('Este cliente ya está guardado en tu agenda.', 'info');
+      onNotify('Este cliente ya existe en el directorio.', 'info');
       return;
     }
     onSaveCliente({
@@ -309,7 +299,7 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
       email: emailCliente.trim(),
       creadoEn: new Date().toISOString(),
     });
-    onNotify(`Cliente "${razonSocialCliente.trim()}" guardado en tu agenda frecuente.`, 'success');
+    onNotify(`Cliente "${razonSocialCliente.trim()}" guardado en el directorio.`, 'success');
   };
 
   const updateItem = (id: string, patch: Partial<ComprobanteItem>) => {
@@ -322,7 +312,7 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
       {
         id: crypto.randomUUID(),
         unidad: 'ZZ',
-        descripcion: config.conceptosRapidos[0] || 'Consumo Peña Show',
+        descripcion: config.conceptosRapidos[0] || 'Prestación de servicios',
         cantidad: 1,
         montoIngresado: 0,
         esTotalLinea: true,
@@ -335,12 +325,8 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
     setItems((prev) => (prev.length > 1 ? prev.filter((it) => it.id !== id) : prev));
   };
 
-  const resetForNextSlip = (savedRecordsCount: number) => {
-    // Mantiene fechaConsumo, fechaEmisionSunat, tasaIgv y modoCalculo para volar ingresando un bloque del mismo día
-    const simulatedList = [
-      ...comprobantes,
-      { notaInterna } as ComprobanteRecord,
-    ];
+  const resetForNextSlip = () => {
+    const simulatedList = [...comprobantes, { notaInterna } as ComprobanteRecord];
     setNotaInterna(getNextNotaInterna(simulatedList));
     if (tipoComprobante === '03') {
       setTipoDocCliente('0');
@@ -355,19 +341,17 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
       {
         id: crypto.randomUUID(),
         unidad: 'ZZ',
-        descripcion: items[0]?.descripcion || config.conceptosRapidos[0] || 'Consumo Peña Show',
+        descripcion: items[0]?.descripcion || config.conceptosRapidos[0] || 'Prestación de servicios',
         cantidad: 1,
         montoIngresado: 0,
         esTotalLinea: true,
         afectacion: tasaIgv > 0 ? '10' : '20',
       },
     ]);
-    if (savedRecordsCount >= 0) {
-      setTimeout(() => {
-        montoInputRef.current?.focus();
-        montoInputRef.current?.select();
-      }, 40);
-    }
+    setTimeout(() => {
+      montoInputRef.current?.focus();
+      montoInputRef.current?.select();
+    }, 40);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -388,13 +372,10 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
     onSaveComprobante(recordToSave, Boolean(editingRecord));
     if (editingRecord) {
       onCancelEdit();
-      onNotify(`Comprobante ${recordToSave.notaInterna} actualizado correctamente.`, 'success');
+      onNotify(`Comprobante ${recordToSave.notaInterna} actualizado.`, 'success');
     } else {
-      onNotify(
-        `Nota ${recordToSave.notaInterna} (${formatMoney(calculo.importeTotal, moneda)}) agregada a la cola SUNAT.`,
-        'success'
-      );
-      resetForNextSlip(comprobantes.length + 1);
+      onNotify(`Nota ${recordToSave.notaInterna} (${formatMoney(calculo.importeTotal, moneda)}) guardada en Bandeja.`, 'success');
+      resetForNextSlip();
     }
   };
 
@@ -402,13 +383,12 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
     try {
       await navigator.clipboard.writeText(text);
       setCopiedKey(key);
-      setTimeout(() => setCopiedKey(null), 1600);
+      setTimeout(() => setCopiedKey(null), 1500);
     } catch {
       onNotify('No se pudo copiar al portapapeles.', 'error');
     }
   };
 
-  // Importación masiva
   const bulkParsed = useMemo(() => parseBulkLines(bulkText, config), [bulkText, config]);
   const validBulkRows = useMemo(() => bulkParsed.filter((r) => !r.error), [bulkParsed]);
 
@@ -418,9 +398,9 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
     try {
       const text = await readSpreadsheetToLines(file);
       setBulkText(text);
-      onNotify(`Archivo "${file.name}" leído. Revisa la vista previa e importa.`, 'success');
+      onNotify(`Archivo "${file.name}" cargado. Revisa la vista previa e importa.`, 'success');
     } catch {
-      onNotify('Error leyendo el archivo Excel/CSV. Verifica el formato.', 'error');
+      onNotify('Error leyendo el archivo Excel/CSV.', 'error');
     }
     e.target.value = '';
   };
@@ -433,80 +413,65 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
     const nuevos = validBulkRows.map((row) => bulkRowToComprobante(row, config));
     onImportBulk(nuevos);
     setBulkText('');
-    onNotify(`Se importaron ${nuevos.length} comprobantes calculados listos para SUNAT.`, 'success');
+    onNotify(`Se importaron ${nuevos.length} comprobante(s) a la Bandeja.`, 'success');
   };
 
   const rucCheck = tipoDocCliente === '6' && numeroDocCliente.trim() ? validarRucPeru(numeroDocCliente) : null;
   const dniCheck = tipoDocCliente === '1' && numeroDocCliente.trim() ? validarDniPeru(numeroDocCliente) : null;
 
   return (
-    <div className="space-y-6">
-      {/* Selector superior Individual vs Pegado Masivo */}
+    <div className="space-y-5">
+      {/* Switcher Individual vs Masivo */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Zap className="w-5 h-5 text-amber-400" />
-            {editingRecord ? `Editando Nota ${editingRecord.notaInterna}` : 'Captura Relámpago de Boletas Escritas'}
-          </h2>
-          <p className="text-sm text-slate-400">
-            Ingresa las notas físicas sin calculadora: el sistema calcula el Valor Unitario exacto SUNAT al céntimo y valida todas las reglas tributarias.
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 p-1 rounded-xl">
+        <div className="inline-flex p-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-soft)] gap-1">
           <button
             type="button"
             onClick={() => setSubMode('INDIVIDUAL')}
-            className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 ${
-              subMode === 'INDIVIDUAL'
-                ? 'bg-amber-500 text-slate-950 shadow'
-                : 'text-slate-300 hover:text-white'
+            className={`cursor-pointer px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              subMode === 'INDIVIDUAL' ? 'fs-pill-accent' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
             }`}
           >
-            <Calculator className="w-4 h-4" />
-            Ingreso Rápido (1 a 1)
+            <Calculator className="w-3.5 h-3.5" />
+            {editingRecord ? `Editando ${editingRecord.notaInterna}` : 'Registro Individual'}
           </button>
           <button
             type="button"
             onClick={() => setSubMode('MASIVO')}
-            className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 ${
-              subMode === 'MASIVO'
-                ? 'bg-amber-500 text-slate-950 shadow'
-                : 'text-slate-300 hover:text-white'
+            className={`cursor-pointer px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              subMode === 'MASIVO' ? 'fs-pill-accent' : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]'
             }`}
           >
-            <ClipboardPaste className="w-4 h-4" />
-            Carga Masiva / Excel
+            <ClipboardPaste className="w-3.5 h-3.5" />
+            Importación Masiva / Excel
           </button>
         </div>
+
+        {editingRecord && (
+          <button
+            type="button"
+            onClick={onCancelEdit}
+            className="cursor-pointer px-3 py-1.5 rounded-xl fs-pill-rose text-xs font-bold"
+          >
+            Cancelar edición
+          </button>
+        )}
       </div>
 
       {subMode === 'INDIVIDUAL' ? (
-        <form onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
-          {/* COLUMNA IZQUIERDA: FORMULARIO RAPIDO */}
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 xl:grid-cols-12 gap-5 items-start">
+          {/* Columna Izquierda */}
           <div className="xl:col-span-7 space-y-5">
-            {/* Tarjeta 1: Tipo, Fechas y Nota */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                  1. Tipo de Comprobante y Fechas
-                </span>
-                {editingRecord && (
-                  <button
-                    type="button"
-                    onClick={onCancelEdit}
-                    className="text-xs px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700"
-                  >
-                    Cancelar edición
-                  </button>
-                )}
+            {/* 1. Tipo y Fechas */}
+            <div className="fs-card p-5 space-y-4">
+              <div className="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
+                1. Tipo de Comprobante y Fechas
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 gap-2.5">
                 {(
                   [
-                    { id: '03', label: 'Boleta de Venta', sub: 'Turistas / DNI / Varios' },
-                    { id: '01', label: 'Factura (RUC)', sub: 'Agencias / Empresas' },
+                    { id: '03', label: 'Boleta de Venta', sub: 'DNI / Pasaporte / Varios' },
+                    { id: '01', label: 'Factura (RUC)', sub: 'Empresas / Negocios' },
                     { id: '07', label: 'Nota de Crédito', sub: 'Anulación / Ajuste' },
                   ] as const
                 ).map((opt) => (
@@ -514,13 +479,13 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                     key={opt.id}
                     type="button"
                     onClick={() => handleTipoChange(opt.id)}
-                    className={`p-3 rounded-xl border text-left transition ${
+                    className={`cursor-pointer p-3 rounded-xl border text-left transition ${
                       tipoComprobante === opt.id
-                        ? 'bg-amber-500/15 border-amber-400 text-white ring-1 ring-amber-400/50'
-                        : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                        ? 'fs-pill-accent'
+                        : 'bg-[var(--bg-inset)] border-[var(--border-soft)] text-[var(--text-secondary)] hover:border-[var(--border-strong)]'
                     }`}
                   >
-                    <div className="font-bold text-sm">{opt.label}</div>
+                    <div className="font-bold text-xs sm:text-sm">{opt.label}</div>
                     <div className="text-[11px] opacity-80">{opt.sub}</div>
                   </button>
                 ))}
@@ -528,56 +493,57 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    N° Nota Escrita (Papel)
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
+                    N° Referencia / Nota
                   </label>
                   <input
                     type="text"
                     value={notaInterna}
                     onChange={(e) => setNotaInterna(e.target.value)}
-                    placeholder="Ej. N-001"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm font-mono-num focus:border-amber-400 focus:outline-none"
+                    placeholder="N-001"
+                    className="fs-input w-full px-3 py-2 text-sm font-mono-num"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-amber-300 mb-1">
-                    Fecha de Consumo / Nota
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
+                    Fecha de Operación
                   </label>
                   <input
                     type="date"
                     value={fechaConsumo}
                     onChange={(e) => setFechaConsumo(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:border-amber-400 focus:outline-none"
+                    className="fs-input w-full px-3 py-2 text-sm"
                   />
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-medium text-emerald-300">
+                    <label className="block text-xs font-semibold" style={{ color: 'var(--sage-text)' }}>
                       Fecha Emisión SUNAT
                     </label>
                     <button
                       type="button"
                       onClick={() => setFechaEmisionSunat(hoy)}
-                      className="text-[11px] text-emerald-400 hover:underline"
+                      className="cursor-pointer text-[11px] font-semibold hover:underline"
+                      style={{ color: 'var(--accent-text)' }}
                     >
-                      Poner hoy
+                      Hoy
                     </button>
                   </div>
                   <input
                     type="date"
                     value={fechaEmisionSunat}
                     onChange={(e) => setFechaEmisionSunat(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:border-emerald-400 focus:outline-none"
+                    className="fs-input w-full px-3 py-2 text-sm"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Tarjeta 2: Cliente / Agencia / Turista */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4">
+            {/* 2. Cliente */}
+            <div className="fs-card p-5 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                  2. Datos del Cliente / Agencia / Turista
+                <span className="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
+                  2. Datos del Cliente / Adquirente
                 </span>
                 {clientes.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
@@ -586,7 +552,7 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                         key={c.id}
                         type="button"
                         onClick={() => handleApplyClienteFrecuente(c)}
-                        className="text-[11px] px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-amber-200 border border-slate-700 transition"
+                        className="cursor-pointer text-[11px] px-2.5 py-1 rounded-full fs-pill-peach font-semibold transition hover:opacity-85"
                         title={`${c.numeroDoc} — ${c.razonSocial}`}
                       >
                         ★ {c.alias || c.razonSocial.slice(0, 18)}
@@ -598,7 +564,7 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
                 <div className="sm:col-span-4">
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
                     Tipo Documento
                   </label>
                   <select
@@ -614,19 +580,19 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                         if (razonSocialCliente === 'CLIENTES VARIOS') setRazonSocialCliente('');
                       }
                     }}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:border-amber-400 focus:outline-none"
+                    className="fs-input w-full px-3 py-2 text-sm"
                   >
                     <option value="0">Sin Doc. (Clientes Varios)</option>
                     <option value="6">RUC (11 dígitos)</option>
                     <option value="1">DNI (8 dígitos)</option>
-                    <option value="7">Pasaporte (Turista Ext.)</option>
+                    <option value="7">Pasaporte</option>
                     <option value="4">Carnet de Extranjería</option>
                   </select>
                 </div>
 
                 <div className="sm:col-span-5">
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    Número de RUC / DNI / Pasaporte
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
+                    Número de Documento
                   </label>
                   <div className="flex gap-1.5">
                     <input
@@ -634,15 +600,14 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                       value={numeroDocCliente}
                       onChange={(e) => setNumeroDocCliente(e.target.value)}
                       placeholder={tipoDocCliente === '6' ? '20XXXXXXXXX' : tipoDocCliente === '1' ? '8 dígitos' : '-'}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm font-mono-num focus:border-amber-400 focus:outline-none"
+                      className="fs-input w-full px-3 py-2 text-sm font-mono-num"
                     />
                     {(tipoDocCliente === '6' || tipoDocCliente === '1') && (
                       <button
                         type="button"
                         onClick={handleConsultarDoc}
                         disabled={lookupLoading}
-                        className="px-3 py-2 rounded-xl bg-sky-500/20 border border-sky-500/40 text-sky-300 hover:bg-sky-500/30 text-xs font-semibold flex items-center gap-1 shrink-0 disabled:opacity-50"
-                        title="Consultar razón social en Agenda o SUNAT/RENIEC"
+                        className="cursor-pointer px-3 py-2 rounded-xl fs-pill-sky text-xs font-bold flex items-center gap-1 shrink-0 disabled:opacity-50"
                       >
                         <Search className="w-3.5 h-3.5" />
                         {lookupLoading ? '...' : 'Buscar'}
@@ -651,20 +616,18 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                   </div>
                   {rucCheck && (
                     <p
-                      className={`text-[11px] mt-1 ${
-                        rucCheck.valido ? 'text-emerald-400' : 'text-rose-400'
-                      }`}
+                      className="text-[11px] mt-1 font-medium"
+                      style={{ color: rucCheck.valido ? 'var(--sage-text)' : 'var(--rose-text)' }}
                     >
                       {rucCheck.valido ? `✓ RUC válido (${rucCheck.tipo})` : `✗ ${rucCheck.motivo}`}
                     </p>
                   )}
                   {dniCheck && (
                     <p
-                      className={`text-[11px] mt-1 ${
-                        dniCheck.valido ? 'text-emerald-400' : 'text-rose-400'
-                      }`}
+                      className="text-[11px] mt-1 font-medium"
+                      style={{ color: dniCheck.valido ? 'var(--sage-text)' : 'var(--rose-text)' }}
                     >
-                      {dniCheck.valido ? '✓ Formato DNI válido' : `✗ ${dniCheck.motivo}`}
+                      {dniCheck.valido ? '✓ DNI válido' : `✗ ${dniCheck.motivo}`}
                     </p>
                   )}
                 </div>
@@ -673,92 +636,76 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                   <button
                     type="button"
                     onClick={handleSaveCurrentClientToAgenda}
-                    className="w-full py-2 px-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium flex items-center justify-center gap-1.5 border border-slate-700"
-                    title="Guardar este cliente en tu Agenda Frecuente"
+                    className="fs-btn-soft w-full py-2 px-2.5 text-xs flex items-center justify-center gap-1.5"
                   >
-                    <UserPlus className="w-3.5 h-3.5 text-amber-400" />
-                    Guardar Cliente
+                    <UserPlus className="w-3.5 h-3.5" style={{ color: 'var(--accent-text)' }} />
+                    Guardar
                   </button>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    Razón Social / Nombre del Cliente
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
+                    Razón Social / Nombres
                   </label>
                   <input
                     type="text"
                     value={razonSocialCliente}
                     onChange={(e) => setRazonSocialCliente(e.target.value)}
-                    placeholder="Ej. INCA TOURS S.A.C. o CLIENTES VARIOS"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:border-amber-400 focus:outline-none"
+                    placeholder="Razón social o CLIENTES VARIOS"
+                    className="fs-input w-full px-3 py-2 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                  <label className="block text-xs font-semibold text-[var(--text-secondary)] mb-1">
                     Dirección (Opcional)
                   </label>
                   <input
                     type="text"
                     value={direccionCliente}
                     onChange={(e) => setDireccionCliente(e.target.value)}
-                    placeholder="Av. / Calle / Distrito"
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-sm focus:border-amber-400 focus:outline-none"
+                    placeholder="Dirección fiscal o comercial"
+                    className="fs-input w-full px-3 py-2 text-sm"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Tarjeta 3: Modo IGV, Tasa e Ítems / Montos */}
-            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-amber-400 block">
-                3. Cálculo de IGV y Detalle del Consumo
-              </span>
+            {/* 3. Cálculo e Ítems */}
+            <div className="fs-card p-5 space-y-4">
+              <div className="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)]">
+                3. Cálculo IGV y Detalle del Comprobante
+              </div>
 
-              {/* Selector de Modo IGV */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <button
                   type="button"
                   onClick={() => setModoCalculo('INCLUYE_IGV')}
-                  className={`p-3 rounded-xl border text-left transition ${
+                  className={`cursor-pointer p-3 rounded-xl border text-left transition ${
                     modoCalculo === 'INCLUYE_IGV'
-                      ? 'bg-emerald-500/15 border-emerald-400 text-white'
-                      : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-700'
+                      ? 'fs-pill-sage'
+                      : 'bg-[var(--bg-inset)] border-[var(--border-soft)] text-[var(--text-secondary)]'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-sm">Mantener Total (Desglosar IGV)</span>
-                    {modoCalculo === 'INCLUYE_IGV' && (
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold">
-                        PEÑA SHOW
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-[11px] opacity-80 mt-0.5">
-                    Ej: Nota S/ 250 → Emitir por <strong>S/ 250.00 exactos</strong> sacando Base + IGV adentro.
-                  </p>
+                  <div className="font-bold text-xs sm:text-sm">IGV Incluido (Mantener Total)</div>
+                  <div className="text-[11px] opacity-80">Extrae Base e IGV conservando el total.</div>
                 </button>
-
                 <button
                   type="button"
                   onClick={() => setModoCalculo('MAS_IGV')}
-                  className={`p-3 rounded-xl border text-left transition ${
+                  className={`cursor-pointer p-3 rounded-xl border text-left transition ${
                     modoCalculo === 'MAS_IGV'
-                      ? 'bg-sky-500/15 border-sky-400 text-white'
-                      : 'bg-slate-950/70 border-slate-800 text-slate-400 hover:border-slate-700'
+                      ? 'fs-pill-sky'
+                      : 'bg-[var(--bg-inset)] border-[var(--border-soft)] text-[var(--text-secondary)]'
                   }`}
                 >
-                  <div className="font-bold text-sm">Monto Neto (+ Sumar IGV)</div>
-                  <p className="text-[11px] opacity-80 mt-0.5">
-                    Ej: Nota S/ 250 neto → Se le agrega IGV encima (Total S/ 295.00 al 18%).
-                  </p>
+                  <div className="font-bold text-xs sm:text-sm">Neto + IGV Adicional</div>
+                  <div className="text-[11px] opacity-80">Suma el porcentaje de IGV sobre la base.</div>
                 </button>
               </div>
 
-              {/* Selector de Tasa IGV */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-slate-400 font-medium mr-1">Tasa IGV:</span>
+              <div className="flex flex-wrap items-center gap-1.5">
                 {TASAS_IGV_PRESETS.map((preset) => (
                   <button
                     key={preset.value}
@@ -767,24 +714,20 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                       setTasaIgv(preset.value);
                       setCustomTasa('');
                       setItems((prev) =>
-                        prev.map((it) => ({
-                          ...it,
-                          afectacion: preset.value === 0 ? '20' : '10',
-                        }))
+                        prev.map((it) => ({ ...it, afectacion: preset.value === 0 ? '20' : '10' }))
                       );
                     }}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
+                    className={`cursor-pointer px-2.5 py-1.5 rounded-lg text-xs font-bold border transition ${
                       tasaIgv === preset.value && !customTasa
-                        ? 'bg-amber-500 text-slate-950 border-amber-400'
-                        : 'bg-slate-950 text-slate-300 border-slate-700 hover:border-slate-500'
+                        ? 'fs-pill-accent'
+                        : 'bg-[var(--bg-inset)] border-[var(--border-soft)] text-[var(--text-secondary)]'
                     }`}
-                    title={preset.label}
                   >
-                    {preset.value}% <span className="font-normal opacity-75">({preset.badge})</span>
+                    {preset.value}% ({preset.badge})
                   </button>
                 ))}
-                <div className="flex items-center gap-1 bg-slate-950 border border-slate-700 rounded-lg px-2 py-1">
-                  <span className="text-[11px] text-slate-400">Otra %:</span>
+                <div className="flex items-center gap-1 bg-[var(--bg-inset)] border border-[var(--border-soft)] rounded-lg px-2 py-1">
+                  <span className="text-[11px] text-[var(--text-muted)]">Otro %:</span>
                   <input
                     type="number"
                     step="0.1"
@@ -796,47 +739,42 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                       const v = parseFloat(e.target.value);
                       if (Number.isFinite(v) && v >= 0) setTasaIgv(v);
                     }}
-                    placeholder="ej. 12"
-                    className="w-14 bg-transparent text-white text-xs font-mono-num focus:outline-none"
+                    placeholder="%"
+                    className="w-12 bg-transparent text-xs font-mono-num text-[var(--text-primary)] focus:outline-none"
                   />
                 </div>
               </div>
 
-              {/* Chips de conceptos rápidos Peña Show */}
               <div className="flex flex-wrap gap-1.5">
                 {config.conceptosRapidos.map((concepto) => (
                   <button
                     key={concepto}
                     type="button"
                     onClick={() => updateItem(items[0].id, { descripcion: concepto })}
-                    className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-amber-500/20 hover:text-amber-200 text-slate-300 border border-slate-700/80 transition"
+                    className="cursor-pointer text-[11px] px-2.5 py-1 rounded-lg fs-btn-soft"
                   >
                     + {concepto}
                   </button>
                 ))}
               </div>
 
-              {/* Lista de ítems */}
               <div className="space-y-2.5">
                 {items.map((item, idx) => (
-                  <div
-                    key={item.id}
-                    className="p-3 rounded-xl bg-slate-950/90 border border-slate-800 space-y-2.5"
-                  >
+                  <div key={item.id} className="fs-inset p-3.5 space-y-2.5">
                     <div className="grid grid-cols-12 gap-2 items-end">
                       <div className="col-span-12 sm:col-span-6">
-                        <label className="block text-[11px] text-slate-400 mb-1">
-                          Descripción del Servicio / Consumo {items.length > 1 ? `#${idx + 1}` : ''}
+                        <label className="block text-[11px] text-[var(--text-muted)] mb-1">
+                          Descripción {items.length > 1 ? `#${idx + 1}` : ''}
                         </label>
                         <input
                           type="text"
                           value={item.descripcion}
                           onChange={(e) => updateItem(item.id, { descripcion: e.target.value })}
-                          className="w-full px-3 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm focus:border-amber-400 focus:outline-none"
+                          className="fs-input w-full px-3 py-2 text-sm"
                         />
                       </div>
                       <div className="col-span-4 sm:col-span-2">
-                        <label className="block text-[11px] text-slate-400 mb-1">Cant.</label>
+                        <label className="block text-[11px] text-[var(--text-muted)] mb-1">Cant.</label>
                         <input
                           type="number"
                           min="0.01"
@@ -845,18 +783,18 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                           onChange={(e) =>
                             updateItem(item.id, { cantidad: Math.max(0.01, parseFloat(e.target.value) || 1) })
                           }
-                          className="w-full px-2.5 py-2 rounded-lg bg-slate-900 border border-slate-700 text-white text-sm font-mono-num text-center focus:border-amber-400 focus:outline-none"
+                          className="fs-input w-full px-2 py-2 text-sm font-mono-num text-center"
                         />
                       </div>
                       <div className="col-span-6 sm:col-span-3">
-                        <label className="block text-[11px] text-amber-300 font-semibold mb-1">
+                        <label className="block text-[11px] font-bold mb-1" style={{ color: 'var(--accent-text)' }}>
                           {modoCalculo === 'INCLUYE_IGV'
                             ? item.esTotalLinea
-                              ? `Total Línea (${moneda})`
-                              : `P. Unit c/IGV (${moneda})`
+                              ? `Total (${moneda})`
+                              : `P. Unit (${moneda})`
                             : item.esTotalLinea
-                              ? `Subtotal Neto (${moneda})`
-                              : `Val. Unit Neto (${moneda})`}
+                              ? `Subtotal (${moneda})`
+                              : `V. Unit (${moneda})`}
                         </label>
                         <input
                           ref={idx === 0 ? montoInputRef : undefined}
@@ -868,7 +806,7 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                             updateItem(item.id, { montoIngresado: parseFloat(e.target.value) || 0 })
                           }
                           placeholder="0.00"
-                          className="w-full px-3 py-2 rounded-lg bg-slate-900 border-2 border-amber-500/60 text-amber-200 text-base font-bold font-mono-num text-right focus:border-amber-400 focus:outline-none"
+                          className="fs-input w-full px-3 py-2 text-base font-extrabold font-mono-num text-right"
                         />
                       </div>
                       <div className="col-span-2 sm:col-span-1 flex justify-end">
@@ -876,8 +814,8 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                           <button
                             type="button"
                             onClick={() => removeItem(item.id)}
-                            className="p-2 rounded-lg text-rose-400 hover:bg-rose-500/15"
-                            title="Quitar ítem"
+                            className="cursor-pointer p-2 rounded-lg hover:bg-[var(--rose-soft)]"
+                            style={{ color: 'var(--rose-text)' }}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -885,20 +823,20 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
+                    <div className="flex flex-wrap items-center gap-3 text-[11px] text-[var(--text-muted)]">
                       <label className="flex items-center gap-1.5 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={item.esTotalLinea}
                           onChange={(e) => updateItem(item.id, { esTotalLinea: e.target.checked })}
-                          className="accent-amber-500"
+                          className="accent-[var(--accent-bg)]"
                         />
-                        El monto es el total de toda la línea
+                        Monto corresponde al total de la línea
                       </label>
                       <select
                         value={item.afectacion}
                         onChange={(e) => updateItem(item.id, { afectacion: e.target.value as AfectacionIGV })}
-                        className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-slate-200"
+                        className="fs-input px-2 py-0.5 text-[11px]"
                       >
                         <option value="10">10 - Gravado IGV</option>
                         <option value="20">20 - Exonerado</option>
@@ -907,10 +845,10 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                       <select
                         value={item.unidad}
                         onChange={(e) => updateItem(item.id, { unidad: e.target.value })}
-                        className="bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-slate-200"
+                        className="fs-input px-2 py-0.5 text-[11px]"
                       >
                         <option value="ZZ">ZZ - Servicio</option>
-                        <option value="NIU">NIU - Unidad / Plato</option>
+                        <option value="NIU">NIU - Unidad</option>
                       </select>
                     </div>
                   </div>
@@ -921,27 +859,25 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                 <button
                   type="button"
                   onClick={addItem}
-                  className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center gap-1.5 border border-slate-700"
+                  className="fs-btn-soft px-3 py-1.5 text-xs flex items-center gap-1.5"
                 >
-                  <Plus className="w-3.5 h-3.5 text-amber-400" />
-                  Agregar otro ítem / plato / bebida
+                  <Plus className="w-3.5 h-3.5" style={{ color: 'var(--accent-text)' }} />
+                  Añadir otro ítem
                 </button>
-
                 <button
                   type="button"
                   onClick={() => setShowAvanzado((s) => !s)}
-                  className="text-xs text-slate-400 hover:text-amber-300 underline"
+                  className="cursor-pointer text-xs font-semibold hover:underline"
+                  style={{ color: 'var(--accent-text)' }}
                 >
-                  {showAvanzado ? 'Ocultar opciones avanzadas' : '+ Opciones avanzadas (Recargo 10%, Descuento, USD, Obs.)'}
+                  {showAvanzado ? 'Ocultar opciones adicionales' : '+ Opciones adicionales (Recargo, Descuento, USD)'}
                 </button>
               </div>
 
               {showAvanzado && (
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-3 border-t border-slate-800">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-3 border-t border-[var(--border-soft)]">
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">
-                      Recargo Consumo % (Ley 25988)
-                    </label>
+                    <label className="block text-[11px] text-[var(--text-muted)] mb-1">Recargo Consumo %</label>
                     <input
                       type="number"
                       step="1"
@@ -949,184 +885,164 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                       max="13"
                       value={recargoConsumoPct}
                       onChange={(e) => setRecargoConsumoPct(Math.max(0, parseFloat(e.target.value) || 0))}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-sm font-mono-num"
+                      className="fs-input w-full px-2.5 py-1.5 text-sm font-mono-num"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Descuento Global</label>
+                    <label className="block text-[11px] text-[var(--text-muted)] mb-1">Descuento Global</label>
                     <input
                       type="number"
                       step="0.01"
                       min="0"
                       value={descuentoGlobal}
                       onChange={(e) => setDescuentoGlobal(Math.max(0, parseFloat(e.target.value) || 0))}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-sm font-mono-num"
+                      className="fs-input w-full px-2.5 py-1.5 text-sm font-mono-num"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Moneda</label>
+                    <label className="block text-[11px] text-[var(--text-muted)] mb-1">Moneda</label>
                     <select
                       value={moneda}
                       onChange={(e) => setMoneda(e.target.value as Moneda)}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-sm"
+                      className="fs-input w-full px-2.5 py-1.5 text-sm"
                     >
-                      <option value="PEN">PEN - Soles (S/)</option>
-                      <option value="USD">USD - Dólares (US$)</option>
+                      <option value="PEN">PEN - Soles</option>
+                      <option value="USD">USD - Dólares</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-[11px] text-slate-400 mb-1">Forma de Pago</label>
+                    <label className="block text-[11px] text-[var(--text-muted)] mb-1">Forma de Pago</label>
                     <select
                       value={formaPago}
                       onChange={(e) => setFormaPago(e.target.value as FormaPago)}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-sm"
+                      className="fs-input w-full px-2.5 py-1.5 text-sm"
                     >
                       <option value="CONTADO">Contado</option>
                       <option value="CREDITO">Crédito</option>
                     </select>
                   </div>
-                  <div className="sm:col-span-4">
-                    <label className="block text-[11px] text-slate-400 mb-1">Observaciones Internas</label>
+                  <div className="col-span-2 sm:col-span-4">
+                    <label className="block text-[11px] text-[var(--text-muted)] mb-1">Observaciones Internas</label>
                     <input
                       type="text"
                       value={observaciones}
                       onChange={(e) => setObservaciones(e.target.value)}
-                      placeholder="Mesa, guía turístico, forma de pago POS/Yape, etc."
-                      className="w-full px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-white text-sm"
+                      placeholder="Medio de pago, referencia interna, orden de servicio..."
+                      className="fs-input w-full px-3 py-1.5 text-sm"
                     />
                   </div>
                 </div>
               )}
 
-              <label className="flex items-center gap-2 text-xs text-slate-300 pt-1 cursor-pointer">
+              <label className="flex items-center gap-2 text-xs text-[var(--text-secondary)] pt-1 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={incluirRefFechaEnDesc}
                   onChange={(e) => setIncluirRefFechaEnDesc(e.target.checked)}
-                  className="accent-amber-500"
+                  className="accent-[var(--accent-bg)]"
                 />
-                Agregar automáticamente <span className="text-amber-300 font-medium">(Consumo DD/MM/AAAA - Ref. Nota)</span> a la descripción para SUNAT
+                Incluir automáticamente fecha de operación y referencia en la descripción para SUNAT
               </label>
             </div>
           </div>
 
-          {/* COLUMNA DERECHA: PANEL DE CALCULO EXACTO SUNAT EN VIVO */}
-          <div className="xl:col-span-5 space-y-4 xl:sticky xl:top-32">
-            <div className="bg-gradient-to-br from-slate-900 via-slate-900 to-slate-950 border border-amber-500/30 rounded-2xl p-5 shadow-xl shadow-black/40 space-y-4">
+          {/* Columna Derecha: Panel de Cálculo Sticky */}
+          <div className="xl:col-span-5 xl:sticky xl:top-20">
+            <div className="fs-card p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4" />
-                  Desglose Tributario Exacto SUNAT
+                <span className="text-xs font-extrabold uppercase tracking-wider text-[var(--text-secondary)] flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4" style={{ color: 'var(--accent-text)' }} />
+                  Desglose Tributario
                 </span>
                 <span
                   className={`text-[11px] px-2.5 py-0.5 rounded-full font-bold ${
-                    calculo.cuadreExacto
-                      ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
-                      : 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                    calculo.cuadreExacto ? 'fs-pill-sage' : 'fs-pill-peach'
                   }`}
                 >
-                  {calculo.cuadreExacto ? '✓ Cuadra al céntimo' : '⚠ Revisar decimales'}
+                  {calculo.cuadreExacto ? '✓ Cuadra exacto' : 'Revisar decimales'}
                 </span>
               </div>
 
-              {/* Caja destacada: Valor Unitario para copiar en SUNAT SOL */}
-              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/40 space-y-2">
+              <div className="p-4 rounded-xl fs-pill-accent space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-semibold text-amber-200">
-                    Valor Unitario EXACTO para Portal SUNAT SOL (sin IGV):
-                  </span>
+                  <span className="text-xs font-bold">Valor Unitario Exacto SUNAT (sin IGV):</span>
                   <button
                     type="button"
                     onClick={() => copyText('vu', calculo.items[0]?.valorUnitarioSunatStr || '0.00')}
-                    className="px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold flex items-center gap-1 transition"
+                    className="fs-btn-primary px-2.5 py-1 text-xs flex items-center gap-1"
                   >
                     {copiedKey === 'vu' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                     {copiedKey === 'vu' ? 'Copiado' : 'Copiar'}
                   </button>
                 </div>
-                <div className="text-2xl sm:text-3xl font-extrabold font-mono-num text-amber-300 tracking-tight">
+                <div className="text-3xl font-extrabold font-mono-num tracking-tight">
                   {calculo.items[0]?.valorUnitarioSunatStr || '0.00'}
                 </div>
-                <p className="text-[11px] text-amber-100/75 leading-relaxed">
-                  Pega este valor exacto en el campo <strong>"Valor Unitario"</strong> de SUNAT SOL para que al sumar el{' '}
-                  <strong>{calculo.tasaIgvPorcentaje}%</strong> de IGV salga exactamente{' '}
-                  <strong>{formatMoney(calculo.importeTotal, moneda)}</strong> sin descuadres de ±S/ 0.01.
-                </p>
               </div>
 
-              {/* Resumen numérico */}
-              <div className="space-y-2 text-sm bg-slate-950/70 rounded-xl p-4 border border-slate-800">
-                <div className="flex justify-between text-slate-300">
-                  <span>Op. Gravada (Subtotal sin IGV):</span>
-                  <span className="font-mono-num font-semibold text-white">
+              <div className="fs-inset p-4 space-y-2 text-sm">
+                <div className="flex justify-between text-[var(--text-secondary)]">
+                  <span>Op. Gravada (Subtotal):</span>
+                  <span className="font-mono-num font-bold text-[var(--text-primary)]">
                     {formatMoney(calculo.opGravada, moneda)}
                   </span>
                 </div>
-                {calculo.opExonerada > 0 && (
-                  <div className="flex justify-between text-slate-300">
-                    <span>Op. Exonerada:</span>
-                    <span className="font-mono-num font-semibold text-white">
-                      {formatMoney(calculo.opExonerada, moneda)}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between text-slate-300">
+                <div className="flex justify-between text-[var(--text-secondary)]">
                   <span>IGV ({calculo.tasaIgvPorcentaje}%):</span>
-                  <span className="font-mono-num font-semibold text-sky-300">
+                  <span className="font-mono-num font-bold" style={{ color: 'var(--sky-text)' }}>
                     {formatMoney(calculo.igvTotal, moneda)}
                   </span>
                 </div>
                 {calculo.recargoConsumoMonto > 0 && (
-                  <div className="flex justify-between text-slate-300">
-                    <span>Recargo al Consumo ({calculo.recargoConsumoPorcentaje}%):</span>
-                    <span className="font-mono-num font-semibold text-amber-200">
+                  <div className="flex justify-between text-[var(--text-secondary)]">
+                    <span>Recargo Consumo ({calculo.recargoConsumoPorcentaje}%):</span>
+                    <span className="font-mono-num font-bold" style={{ color: 'var(--peach-text)' }}>
                       {formatMoney(calculo.recargoConsumoMonto, moneda)}
                     </span>
                   </div>
                 )}
-                <div className="pt-2.5 mt-2 border-t border-slate-800 flex justify-between items-baseline">
-                  <span className="font-bold text-white">IMPORTE TOTAL SUNAT:</span>
-                  <span className="text-2xl font-extrabold font-mono-num text-emerald-400">
+                <div className="pt-2.5 mt-2 border-t border-[var(--border-soft)] flex justify-between items-baseline">
+                  <span className="font-bold text-[var(--text-primary)]">IMPORTE TOTAL:</span>
+                  <span className="text-2xl font-extrabold font-mono-num" style={{ color: 'var(--sage-text)' }}>
                     {formatMoney(calculo.importeTotal, moneda)}
                   </span>
                 </div>
-                <div className="text-[11px] text-slate-400 pt-1 font-medium">
+                <div className="text-[11px] text-[var(--text-muted)] pt-1 font-medium">
                   {calculo.montoEnLetras}
                 </div>
               </div>
 
-              {/* Vista previa de descripción SUNAT */}
-              <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs">
-                <div className="flex items-center justify-between text-slate-400 mb-1">
+              <div className="fs-inset p-3 text-xs">
+                <div className="flex items-center justify-between text-[var(--text-muted)] mb-1">
                   <span>Descripción lista para SUNAT:</span>
                   <button
                     type="button"
                     onClick={() =>
                       copyText('desc', buildDescripcionSunat(items[0]?.descripcion || '', draftRecord))
                     }
-                    className="text-amber-400 hover:underline flex items-center gap-1"
+                    className="cursor-pointer font-semibold hover:underline flex items-center gap-1"
+                    style={{ color: 'var(--accent-text)' }}
                   >
                     {copiedKey === 'desc' ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
                     {copiedKey === 'desc' ? 'Copiada' : 'Copiar'}
                   </button>
                 </div>
-                <p className="text-slate-200 font-medium">
+                <p className="text-[var(--text-primary)] font-medium">
                   {buildDescripcionSunat(items[0]?.descripcion || '', draftRecord)}
                 </p>
               </div>
 
-              {/* Alertas Tributarias en Vivo */}
               {alertas.length > 0 && (
                 <div className="space-y-2">
                   {alertas.map((al, i) => (
                     <div
                       key={`${al.codigo}-${i}`}
-                      className={`p-3 rounded-xl border text-xs flex gap-2.5 ${
+                      className={`p-3 rounded-xl text-xs flex gap-2 ${
                         al.nivel === 'error'
-                          ? 'bg-rose-500/10 border-rose-500/40 text-rose-200'
+                          ? 'fs-pill-rose'
                           : al.nivel === 'warning'
-                            ? 'bg-amber-500/10 border-amber-500/40 text-amber-200'
-                            : 'bg-sky-500/10 border-sky-500/40 text-sky-200'
+                            ? 'fs-pill-peach'
+                            : 'fs-pill-sky'
                       }`}
                     >
                       {al.nivel === 'info' ? (
@@ -1135,48 +1051,38 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                         <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                       )}
                       <div>
-                        <div className="font-semibold">{al.mensaje}</div>
-                        {al.sugerencia && <div className="opacity-85 mt-0.5">{al.sugerencia}</div>}
+                        <div className="font-bold">{al.mensaje}</div>
+                        {al.sugerencia && <div className="opacity-90 mt-0.5">{al.sugerencia}</div>}
                       </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Botón principal Guardar */}
               <button
                 type="submit"
-                className={`w-full py-3.5 px-5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-lg ${
-                  hasHardErrors
-                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'
-                    : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950'
-                }`}
+                className={`${hasHardErrors ? 'fs-btn-primary' : 'fs-btn-sage'} w-full py-3.5 px-5 text-sm flex items-center justify-center gap-2 shadow-sm`}
               >
-                <CheckCircle2 className="w-5 h-5" />
+                <CheckCircle2 className="w-4 h-4" />
                 {editingRecord
-                  ? 'Guardar Cambios del Comprobante'
+                  ? 'Guardar Cambios'
                   : hasHardErrors
-                    ? 'Guardar en Bandeja (Con Alerta a Revisar)'
-                    : 'Guardar Nota y Seguir con la Siguiente (Enter)'}
+                    ? 'Guardar en Bandeja (Con Observación)'
+                    : 'Guardar y Continuar con el Siguiente'}
               </button>
             </div>
           </div>
         </form>
       ) : (
-        /* SUB-MODO CARGA MASIVA / EXCEL / WHATSAPP */
-        <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 space-y-5">
+        <div className="fs-card p-6 space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
-                Carga Masiva de Notas (Pegar de Excel / Texto Rápido / Subir .xlsx)
+              <h3 className="text-base font-bold text-[var(--text-primary)] flex items-center gap-2">
+                <FileSpreadsheet className="w-5 h-5" style={{ color: 'var(--sage-text)' }} />
+                Importación Masiva (Pegar de Excel / Texto / Subir .xlsx)
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Formato flexible por línea (separado por <code>|</code>, coma o tabulación de Excel):{' '}
-                <code className="text-amber-300">
-                  Fecha | Nota | Tipo(F/B) | RUC/DNI/VARIOS | Cliente | Descripción | Monto
-                </code>{' '}
-                o rápido: <code className="text-emerald-300">Fecha | Descripción | Monto</code>
+              <p className="text-xs text-[var(--text-secondary)] mt-1">
+                Formato por línea: <code className="font-mono-num">Fecha | Nota | Tipo(F/B) | RUC/DNI/VARIOS | Cliente | Descripción | Monto</code>
               </p>
             </div>
 
@@ -1185,14 +1091,14 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
                 type="button"
                 onClick={() =>
                   setBulkText(
-                    `05/11/2026 | N-101 | B | VARIOS | CLIENTES VARIOS | Cena Show Turista | 180\n05/11/2026 | N-102 | F | 20100047218 | AGENCIA PERU TOURS SAC | Cena Show Grupo 5 pax | 650\n08/11/2026 | N-103 | B | 45891234 | MARIA LOPEZ | Consumo Alimentos y Bebidas | 320.50`
+                    `05/11/2026 | N-101 | B | VARIOS | CLIENTES VARIOS | Consumo Alimentos y Bebidas | 180\n05/11/2026 | N-102 | F | 20100047218 | CORPORACION COMERCIAL DEL PERU SAC | Prestación de Servicios | 650\n08/11/2026 | N-103 | B | 45891234 | MARIA LOPEZ PEREZ | Venta de Productos | 320.50`
                   )
                 }
-                className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700"
+                className="fs-btn-soft px-3 py-2 text-xs"
               >
                 Cargar ejemplo
               </button>
-              <label className="px-3.5 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+              <label className="cursor-pointer px-3.5 py-2 rounded-xl fs-pill-sage text-xs font-bold flex items-center gap-1.5">
                 <Upload className="w-4 h-4" />
                 Subir Excel / CSV
                 <input
@@ -1209,59 +1115,62 @@ export const CapturaRapida: React.FC<CapturaRapidaProps> = ({
             rows={7}
             value={bulkText}
             onChange={(e) => setBulkText(e.target.value)}
-            placeholder={`Pega aquí tus filas desde Excel o escribe rápido una nota por línea:\n12/11/2026 | N-020 | B | VARIOS | CLIENTES VARIOS | Cena Peña Show | 240\n12/11/2026 | N-021 | F | 20131312955 | INCA TRAILS SAC | Cena Grupo | 890`}
-            className="w-full p-4 rounded-xl bg-slate-950 border border-slate-700 text-slate-100 text-sm font-mono-num focus:border-amber-400 focus:outline-none"
+            placeholder="Pega aquí las filas desde Excel o ingresa una línea por comprobante..."
+            className="fs-input w-full p-4 text-xs font-mono-num"
           />
 
           {bulkParsed.length > 0 && (
             <div className="space-y-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-white">
-                  Vista Previa: {validBulkRows.length} válidas / {bulkParsed.length} filas detectadas (IGV {config.tasaIgvDefecto}%, Modo{' '}
-                  {config.modoCalculoDefecto === 'INCLUYE_IGV' ? 'Mantener Total' : 'Neto + IGV'})
+                <span className="text-xs font-bold text-[var(--text-primary)]">
+                  Vista previa: {validBulkRows.length} válidas de {bulkParsed.length} filas (IGV {config.tasaIgvDefecto}%)
                 </span>
                 <button
                   type="button"
                   onClick={handleConfirmBulkImport}
                   disabled={!validBulkRows.length}
-                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-bold disabled:opacity-40"
+                  className="fs-btn-sage px-4 py-2 text-xs"
                 >
-                  Importar {validBulkRows.length} Comprobantes a la Bandeja
+                  Importar {validBulkRows.length} Comprobantes
                 </button>
               </div>
 
-              <div className="overflow-x-auto border border-slate-800 rounded-xl">
+              <div className="overflow-x-auto border border-[var(--border-soft)] rounded-xl">
                 <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-950 text-slate-400 uppercase">
+                  <thead className="bg-[var(--bg-inset)] text-[var(--text-muted)] uppercase">
                     <tr>
                       <th className="p-2.5">Fecha</th>
                       <th className="p-2.5">Nota</th>
                       <th className="p-2.5">Tipo</th>
-                      <th className="p-2.5">Doc / Cliente</th>
+                      <th className="p-2.5">Cliente</th>
                       <th className="p-2.5">Descripción</th>
                       <th className="p-2.5 text-right">Monto</th>
                       <th className="p-2.5">Estado</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800">
+                  <tbody className="divide-y divide-[var(--border-soft)]">
                     {bulkParsed.map((row) => (
-                      <tr key={row.lineNumber} className="bg-slate-900/50">
+                      <tr key={row.lineNumber}>
                         <td className="p-2.5 font-mono-num">{row.fechaConsumo}</td>
-                        <td className="p-2.5 font-mono-num text-amber-300">{row.notaInterna}</td>
+                        <td className="p-2.5 font-mono-num font-bold" style={{ color: 'var(--accent-text)' }}>
+                          {row.notaInterna}
+                        </td>
                         <td className="p-2.5">{row.tipoComprobante === '01' ? 'FACTURA' : 'BOLETA'}</td>
                         <td className="p-2.5">
-                          <span className="font-mono-num text-slate-400 mr-1.5">{row.numeroDocCliente}</span>
+                          <span className="font-mono-num text-[var(--text-muted)] mr-1.5">{row.numeroDocCliente}</span>
                           {row.razonSocialCliente}
                         </td>
-                        <td className="p-2.5 text-slate-300">{row.descripcion}</td>
-                        <td className="p-2.5 text-right font-mono-num font-bold text-emerald-300">
+                        <td className="p-2.5 text-[var(--text-secondary)]">{row.descripcion}</td>
+                        <td className="p-2.5 text-right font-mono-num font-bold" style={{ color: 'var(--sage-text)' }}>
                           S/ {formatFixed(row.monto, 2)}
                         </td>
                         <td className="p-2.5">
                           {row.error ? (
-                            <span className="text-rose-400">{row.error}</span>
+                            <span style={{ color: 'var(--rose-text)' }}>{row.error}</span>
                           ) : (
-                            <span className="text-emerald-400 font-semibold">✓ Listo</span>
+                            <span className="font-bold" style={{ color: 'var(--sage-text)' }}>
+                              ✓ Válido
+                            </span>
                           )}
                         </td>
                       </tr>

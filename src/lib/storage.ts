@@ -6,16 +6,37 @@ import type {
 import { getHoyPeruISO } from './sunatValidators';
 
 const KEYS = {
-  COMPROBANTES: 'penafact_comprobantes_v1',
-  CLIENTES: 'penafact_clientes_v1',
-  CONFIG: 'penafact_config_v1',
+  COMPROBANTES: 'factsunat_comprobantes_v1',
+  CLIENTES: 'factsunat_clientes_v1',
+  CONFIG: 'factsunat_config_v1',
+  THEME: 'factsunat_theme_v1',
 } as const;
+
+export type ThemeMode = 'light' | 'dark';
+
+export function loadTheme(): ThemeMode {
+  try {
+    const saved = localStorage.getItem(KEYS.THEME);
+    if (saved === 'dark' || saved === 'light') return saved;
+  } catch {
+    // ignore
+  }
+  return 'light';
+}
+
+export function saveTheme(mode: ThemeMode): void {
+  try {
+    localStorage.setItem(KEYS.THEME, mode);
+  } catch {
+    // ignore
+  }
+}
 
 export const DEFAULT_CONFIG: EmpresaEmisoraConfig = {
   ruc: '',
-  razonSocial: 'PEÑA SHOW TURÍSTICA S.A.C.',
-  nombreComercial: 'La Peña Show',
-  direccion: 'Lima / Cusco, Perú',
+  razonSocial: 'MI EMPRESA S.A.C.',
+  nombreComercial: 'Mi Negocio',
+  direccion: 'Lima, Perú',
   distrito: 'LIMA',
   serieFacturaSol: 'E001',
   serieBoletaSol: 'EB01',
@@ -27,12 +48,12 @@ export const DEFAULT_CONFIG: EmpresaEmisoraConfig = {
   recargoConsumoDefecto: 0,
   incluirRefFechaDefecto: true,
   conceptosRapidos: [
-    'Consumo de Alimentos y Bebidas - Peña Show',
-    'Cena Show Folklórico Turístico',
-    'Servicio de Restaurante y Espectáculo',
-    'Entradas Peña Show Turístico',
-    'Consumo de Bebidas y Coctelería',
-    'Almuerzo Turístico Grupal',
+    'Consumo de Alimentos y Bebidas',
+    'Servicio de Atención y Restaurante',
+    'Prestación de Servicios Generales',
+    'Venta de Mercadería / Productos',
+    'Servicio de Eventos y Reservas',
+    'Servicios Profesionales / Asesoría',
   ],
   tokenConsultaDoc: '',
   esquemaCarpetasDefecto: 'SUPER_DUAL',
@@ -108,7 +129,7 @@ export function saveClientes(clientes: ClienteFrecuente[]): void {
 // ============================================================
 // IndexedDB para almacenar binarios de PDFs oficiales SUNAT
 // ============================================================
-const DB_NAME = 'penafact_pdf_vault_v1';
+const DB_NAME = 'factsunat_pdf_vault_v1';
 const STORE_NAME = 'pdfs';
 
 function openPdfDb(): Promise<IDBDatabase> {
@@ -169,7 +190,7 @@ export async function clearAllPdfBlobs(): Promise<void> {
 }
 
 // ============================================================
-// Datos de demostración realistas para probar en 5 segundos
+// Datos de ejemplo neutros y empresariales para evaluación rápida
 // ============================================================
 export function createDemoWorkspace(): {
   comprobantes: ComprobanteRecord[];
@@ -183,30 +204,30 @@ export function createDemoWorkspace(): {
       id: 'cli-1',
       tipoDoc: '6',
       numeroDoc: '20100047218',
-      razonSocial: 'BANCO DE CREDITO DEL PERU (EJEMPLO AGENCIA CORPORATIVA)',
-      alias: 'BCP Corp',
-      direccion: 'Calle Centenario 156, La Molina, Lima',
-      email: 'facturacion@ejemplo-turismo.pe',
+      razonSocial: 'CORPORACION COMERCIAL DEL PERU S.A.C.',
+      alias: 'Corp. Comercial',
+      direccion: 'Av. Javier Prado Este 1420, San Isidro, Lima',
+      email: 'facturacion@ejemplo-empresa.pe',
       creadoEn: now,
     },
     {
       id: 'cli-2',
       tipoDoc: '6',
       numeroDoc: '20131312955',
-      razonSocial: 'INCA TRAILS & FOLKLORE TOURS S.A.C. (DEMO)',
-      alias: 'Inca Trails',
+      razonSocial: 'SERVICIOS LOGISTICOS ANDINOS S.A.C.',
+      alias: 'Logística Andina',
       direccion: 'Av. Pardo 540, Miraflores, Lima',
-      email: 'contabilidad@incatrails-demo.pe',
+      email: 'contabilidad@logistica-ejemplo.pe',
       creadoEn: now,
     },
     {
       id: 'cli-3',
       tipoDoc: '6',
       numeroDoc: '20100128056',
-      razonSocial: 'ANDES EXPERIENCE TRAVEL E.I.R.L. (DEMO)',
-      alias: 'Andes Travel',
+      razonSocial: 'INVERSIONES DEL SUR E.I.R.L.',
+      alias: 'Inv. del Sur',
       direccion: 'Av. El Sol 812, Cusco',
-      email: 'pagos@andestravel-demo.pe',
+      email: 'pagos@inversiones-ejemplo.pe',
       creadoEn: now,
     },
   ];
@@ -222,9 +243,9 @@ export function createDemoWorkspace(): {
       numeroSunat: '',
       tipoDocCliente: '6',
       numeroDocCliente: '20100047218',
-      razonSocialCliente: 'BANCO DE CREDITO DEL PERU (EJEMPLO AGENCIA CORPORATIVA)',
-      direccionCliente: 'Calle Centenario 156, La Molina, Lima',
-      emailCliente: 'facturacion@ejemplo-turismo.pe',
+      razonSocialCliente: 'CORPORACION COMERCIAL DEL PERU S.A.C.',
+      direccionCliente: 'Av. Javier Prado Este 1420, San Isidro, Lima',
+      emailCliente: 'facturacion@ejemplo-empresa.pe',
       moneda: 'PEN',
       tipoCambio: 3.75,
       modoCalculo: 'INCLUYE_IGV',
@@ -233,12 +254,12 @@ export function createDemoWorkspace(): {
       descuentoGlobal: 0,
       formaPago: 'CONTADO',
       incluirRefFechaEnDesc: true,
-      observaciones: 'Grupo de 4 turistas - Mesa 12',
+      observaciones: 'Atención corporativa - Orden interna #12',
       items: [
         {
           id: 'it-1',
           unidad: 'ZZ',
-          descripcion: 'Cena Show Folklórico Turístico (4 personas)',
+          descripcion: 'Consumo de Alimentos y Bebidas (Servicio grupal)',
           cantidad: 4,
           montoIngresado: 480,
           esTotalLinea: true,
@@ -270,12 +291,12 @@ export function createDemoWorkspace(): {
       descuentoGlobal: 0,
       formaPago: 'CONTADO',
       incluirRefFechaEnDesc: true,
-      observaciones: 'Caso clásico S/ 100.00 (redondeo exacto SUNAT SOL)',
+      observaciones: 'Referencia de redondeo exacto S/ 100.00 al 18%',
       items: [
         {
           id: 'it-2',
           unidad: 'ZZ',
-          descripcion: 'Consumo de Alimentos y Bebidas - Peña Show',
+          descripcion: 'Prestación de Servicios Generales',
           cantidad: 1,
           montoIngresado: 100,
           esTotalLinea: true,
@@ -296,9 +317,9 @@ export function createDemoWorkspace(): {
       numeroSunat: '000041',
       tipoDocCliente: '6',
       numeroDocCliente: '20131312955',
-      razonSocialCliente: 'INCA TRAILS & FOLKLORE TOURS S.A.C. (DEMO)',
+      razonSocialCliente: 'SERVICIOS LOGISTICOS ANDINOS S.A.C.',
       direccionCliente: 'Av. Pardo 540, Miraflores, Lima',
-      emailCliente: 'contabilidad@incatrails-demo.pe',
+      emailCliente: 'contabilidad@logistica-ejemplo.pe',
       moneda: 'PEN',
       tipoCambio: 3.75,
       modoCalculo: 'INCLUYE_IGV',
@@ -307,12 +328,12 @@ export function createDemoWorkspace(): {
       descuentoGlobal: 0,
       formaPago: 'CONTADO',
       incluirRefFechaEnDesc: true,
-      observaciones: 'Ejemplo con tasa especial MYPE Restaurantes 10.5% (2026)',
+      observaciones: 'Ejemplo con tasa especial MYPE Restaurantes/Hoteles 10.5% (2026)',
       items: [
         {
           id: 'it-3a',
           unidad: 'ZZ',
-          descripcion: 'Cena Show Folklórico Turístico (Grupo 8 pax)',
+          descripcion: 'Servicio de Atención y Restaurante (8 personas)',
           cantidad: 8,
           montoIngresado: 960,
           esTotalLinea: true,
@@ -321,7 +342,7 @@ export function createDemoWorkspace(): {
         {
           id: 'it-3b',
           unidad: 'ZZ',
-          descripcion: 'Consumo de Bebidas y Coctelería (Pisco Sour)',
+          descripcion: 'Consumo de Bebidas Complementarias',
           cantidad: 6,
           montoIngresado: 180,
           esTotalLinea: true,
@@ -340,9 +361,9 @@ export function createDemoWorkspace(): {
       fechaEmisionSunat: hoy,
       serieSunat: 'EB01',
       numeroSunat: '',
-      tipoDocCliente: '7',
-      numeroDocCliente: 'US8942105',
-      razonSocialCliente: 'JOHNATHAN MILLER (TURISTA USA)',
+      tipoDocCliente: '1',
+      numeroDocCliente: '45891234',
+      razonSocialCliente: 'CARLOS MENDOZA QUISPE',
       direccionCliente: '',
       emailCliente: '',
       moneda: 'PEN',
@@ -353,12 +374,12 @@ export function createDemoWorkspace(): {
       descuentoGlobal: 0,
       formaPago: 'CONTADO',
       incluirRefFechaEnDesc: true,
-      observaciones: 'Boleta >= S/ 700 con Pasaporte (cumple regla SUNAT)',
+      observaciones: 'Boleta ≥ S/ 700 con DNI identificado conforme a norma SUNAT',
       items: [
         {
           id: 'it-4',
           unidad: 'ZZ',
-          descripcion: 'Cena VIP Peña Show + Botella Pisco Quebranta',
+          descripcion: 'Servicio de Eventos y Reservas',
           cantidad: 1,
           montoIngresado: 750,
           esTotalLinea: true,
@@ -379,9 +400,9 @@ export function createDemoWorkspace(): {
       numeroSunat: '',
       tipoDocCliente: '6',
       numeroDocCliente: '20100128056',
-      razonSocialCliente: 'ANDES EXPERIENCE TRAVEL E.I.R.L. (DEMO)',
+      razonSocialCliente: 'INVERSIONES DEL SUR E.I.R.L.',
       direccionCliente: 'Av. El Sol 812, Cusco',
-      emailCliente: 'pagos@andestravel-demo.pe',
+      emailCliente: 'pagos@inversiones-ejemplo.pe',
       moneda: 'PEN',
       tipoCambio: 3.75,
       modoCalculo: 'MAS_IGV',
@@ -390,12 +411,12 @@ export function createDemoWorkspace(): {
       descuentoGlobal: 0,
       formaPago: 'CONTADO',
       incluirRefFechaEnDesc: true,
-      observaciones: 'Ejemplo de modo "Monto Neto + 18% IGV adicional"',
+      observaciones: 'Ejemplo de modo Monto Neto + 18% IGV adicional',
       items: [
         {
           id: 'it-5',
           unidad: 'ZZ',
-          descripcion: 'Reserva Privada Peña Show Grupo Europeo',
+          descripcion: 'Servicios Profesionales / Asesoría Integral',
           cantidad: 1,
           montoIngresado: 1200,
           esTotalLinea: true,

@@ -176,7 +176,7 @@ export function validarComprobanteSunat(
           codigo: 'BOLETA_MAYOR_700',
           mensaje: `Regla SUNAT: Boleta de ${formatMoney(calc.importeTotal, rec.moneda)} (≥ S/ 700.00) exige DNI, Pasaporte o Carnet de Extranjería y nombres del cliente.`,
           sugerencia:
-            'Ingresa el DNI/Pasaporte del turista o guía, o verifica si correspondía emitir más de una boleta por mesas/consumos distintos.',
+            'Ingresa el DNI, Carnet de Extranjería o Pasaporte del cliente, o verifica si correspondía emitir comprobantes independientes por operaciones separadas.',
         });
       }
     }

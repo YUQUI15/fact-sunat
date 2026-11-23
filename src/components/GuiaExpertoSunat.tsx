@@ -1,19 +1,19 @@
 import React, { useState } from 'react';
 import {
-  AlertOctagon,
   BookOpen,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   HelpCircle,
+  Info,
   Layers,
   LifeBuoy,
   ShieldAlert,
-  Sparkles,
 } from 'lucide-react';
+import type { NavTab } from '../App';
 
 interface GuiaExpertoSunatProps {
-  onGoToTab: (tab: 'CALC' | 'CAPTURA' | 'BANDEJA' | 'EMISION' | 'CARPETAS' | 'DASHBOARD' | 'CONFIG') => void;
+  onGoToTab: (tab: NavTab) => void;
 }
 
 interface EmergencyCase {
@@ -28,145 +28,141 @@ interface EmergencyCase {
 const EMERGENCY_CASES: EmergencyCase[] = [
   {
     id: 'err-antes-emitir',
-    titulo: '1. Me di cuenta de un error ANTES de presionar el botón final "Emitir" en SUNAT',
+    titulo: '1. Error detectado ANTES de presionar "Emitir" (pantalla Preliminar)',
     gravedad: 'TIP',
-    resumen: 'Estás en la pantalla de "Preliminar" revisando la vista previa de la Factura o Boleta.',
+    resumen: 'Durante la vista preliminar en SUNAT SEE-SOL el documento todavía no ha sido registrado.',
     pasos: [
-      'NO hagas clic en "Emitir". Haz clic en "Retroceder" (o simplemente cierra esa pestaña del Portal SOL).',
-      'Mientras no presiones "Emitir", NO se genera ningún número ni se informa nada a SUNAT.',
-      'Corrige el dato (RUC, fecha, descripción o valor unitario) y vuelve a generar el preliminar.',
+      'Presione "Retroceder" o cierre la vista sin confirmar la emisión.',
+      'Mientras no se confirme el botón final "Emitir", no se genera correlativo ni obligación tributaria.',
+      'Corrija el RUC, fecha, concepto o valor unitario y vuelva a generar el preliminar.',
     ],
-    reglaOro: 'Acostúmbrate a verificar SIEMPRE 3 cosas en el Preliminar antes de dar Emitir: ① RUC/Cliente, ② Importe Total exacto y ③ Tasa de IGV.',
+    reglaOro: 'Verifique siempre tres campos en el preliminar: ① Documento/Razón Social, ② Importe Total y ③ Tasa de IGV.',
   },
   {
     id: 'err-factura-emitida',
-    titulo: '2. YA EMITÍ una FACTURA y me equivoqué en el RUC, el monto, el IGV o la emití doble',
+    titulo: '2. Factura Electrónica YA EMITIDA con error en RUC, importe, tasa de IGV o emisión duplicada',
     gravedad: 'ALTA',
-    resumen: 'En SUNAT una factura ya emitida NUNCA se puede borrar ni editar. Se anula legalmente con una Nota de Crédito Electrónica.',
+    resumen: 'Un comprobante emitido en SUNAT no puede eliminarse ni editarse. Debe anularse formalmente mediante una Nota de Crédito Electrónica.',
     pasos: [
-      'En el Portal SUNAT SOL (ya abierto en la laptop del dueño) ve a: Empresas → Comprobantes de Pago → SEE - SOL → Factura Electrónica → Emitir Nota de Crédito.',
-      'Elige el Tipo de Nota de Crédito correcto según tu error:',
-      '  • Si el RUC del cliente estuvo mal: elige "Anulación por error en el RUC" (Tipo 02).',
-      '  • Si el monto, el IGV estuvieron mal o emitiste la factura dos veces: elige "Anulación de la operación" (Tipo 01).',
-      'Ingresa la Serie y Número de la factura equivocada (ej. E001 - 145) y haz clic en "Ver Factura" para confirmar que es esa.',
-      'En Motivo o Sustento escribe claro: "Error en digitación de monto / RUC / duplicidad". Presiona Continuar → Emitir.',
-      'Descarga el PDF de la Nota de Crédito. Guarda TANTO el PDF de la factura anulada como el PDF de su Nota de Crédito en una subcarpeta "ANULADAS" o márcala como ANULADO en PeñaFact.',
-      'Finalmente, vuelve a emitir una NUEVA Factura correcta con los datos buenos.',
+      'En Portal SUNAT Operaciones en Línea ingrese a: Empresas → Comprobantes de Pago → SEE - SOL → Factura Electrónica → Emitir Nota de Crédito.',
+      'Seleccione el Tipo de Nota de Crédito correspondiente:',
+      '  • Error en RUC del adquirente: Tipo 02 — "Anulación por error en el RUC".',
+      '  • Error en monto, IGV o comprobante duplicado: Tipo 01 — "Anulación de la operación".',
+      'Ingrese la Serie y Número de la factura observada (ej. E001 - 145) y verifique el documento con "Ver Factura".',
+      'Consigne un sustento claro (ej. "Error en registro de importe / duplicidad de emisión") y confirme Emitir.',
+      'Descargue el PDF de la Nota de Crédito y conserve ambos archivos (Factura original + Nota de Crédito) para el registro contable.',
+      'Emita posteriormente una nueva Factura Electrónica con los datos correctos.',
     ],
-    reglaOro: 'Jamás borres el PDF de una factura anulada ni de su Nota de Crédito: el contador necesita ambos para declarar S/ 0.00 en esa operación.',
+    reglaOro: 'Conserve siempre el PDF del comprobante anulado junto a su Nota de Crédito; ambos son exigidos en la declaración mensual.',
   },
   {
     id: 'err-solo-texto',
-    titulo: '3. Ya emití la Factura: el RUC y el Monto están BIEN, solo me equivoqué en una palabra de la descripción',
+    titulo: '3. Factura YA EMITIDA con RUC y monto correctos, pero con error en la descripción',
     gravedad: 'MEDIA',
-    resumen: 'No necesitas anular todo el monto ni volver a emitir una factura nueva.',
+    resumen: 'Es posible rectificar únicamente el texto sin anular el monto ni emitir una nueva factura.',
     pasos: [
-      'Ve en Portal SUNAT SOL a: Factura Electrónica → Emitir Nota de Crédito.',
-      'Selecciona Tipo 03: "Corrección por error en la descripción".',
-      'Ingresa el número de la factura, escribe la descripción correcta y emite la Nota de Crédito (sale por monto S/ 0.00, solo corrige el texto legalmente).',
-      'Descarga el PDF de esa Nota de Crédito y guárdalo junto a la factura original.',
+      'Ingrese en Portal SUNAT SOL a: Factura Electrónica → Emitir Nota de Crédito.',
+      'Seleccione el Tipo 03 — "Corrección por error en la descripción".',
+      'Indique el comprobante afectado, consigne la redacción correcta y emita la Nota de Crédito (importe S/ 0.00).',
+      'Descargue el PDF de sustento y archívelo junto a la factura original.',
     ],
-    reglaOro: 'Si el error es mínimo y el cliente no pide cambio, consulta primero con el dueño antes de emitir una Nota de Crédito innecesaria.',
+    reglaOro: 'Evalúe con el área administrativa si la corrección textual es indispensable antes de emitir una Nota de Crédito.',
   },
   {
     id: 'err-boleta-emitida',
-    titulo: '4. YA EMITÍ una BOLETA DE VENTA y me equivoqué en el monto o la emití dos veces',
+    titulo: '4. Boleta de Venta Electrónica YA EMITIDA con error de importe o duplicada',
     gravedad: 'ALTA',
-    resumen: 'Igual que la factura, en Portal SOL se anula emitiendo una Nota de Crédito de Boleta.',
+    resumen: 'En Portal SEE-SOL la anulación de boletas emitidas también se gestiona mediante Nota de Crédito de Boleta.',
     pasos: [
-      'En Portal SUNAT SOL entra a: Empresas → Comprobantes de Pago → SEE - SOL → Boleta de Venta Electrónica → Emitir Nota de Crédito.',
-      'Selecciona "Anulación de la operación" (Tipo 01).',
-      'Digita la Serie y Número de la boleta equivocada (ej. EB01 - 210), escribe el motivo ("Error de digitación / duplicado") y presiona Emitir.',
-      'Descarga el PDF de la Nota de Crédito, guárdalo junto con la boleta anulada y luego emite la Boleta correcta.',
+      'Ingrese en Portal SUNAT SOL a: Empresas → Comprobantes de Pago → SEE - SOL → Boleta de Venta Electrónica → Emitir Nota de Crédito.',
+      'Elija Tipo 01 — "Anulación de la operación".',
+      'Ingrese la Serie y Número (ej. EB01 - 210), registre el motivo y confirme la emisión.',
+      'Descargue el PDF de la Nota de Crédito, archívelo junto a la boleta anulada y emita la boleta correcta.',
     ],
-    reglaOro: 'Anota en la boleta física de papel el número de la boleta correcta emitida (ej. "EB01-211 ✓") con lapicero o lápiz para no volver a procesarla.',
+    reglaOro: 'Anote el número de comprobante emitido en el documento físico de respaldo para prevenir emisiones repetidas.',
   },
   {
     id: 'err-fecha-antigua',
-    titulo: '5. La boleta de papel es del 05 de noviembre, pero SUNAT NO me deja poner fecha 05/11',
+    titulo: '5. Documentos de días anteriores del mes y límite de fecha retroactiva en SUNAT SOL',
     gravedad: 'MEDIA',
-    resumen: 'Regla obligatoria de SUNAT Portal SOL: solo permite fechas de HOY y hasta 2 días calendario atrás.',
+    resumen: 'Portal SEE-SOL permite emitir comprobantes únicamente con fecha actual o hasta 2 días calendario anteriores.',
     pasos: [
-      'NO es una falla de la página ni de la laptop: SUNAT bloquea fechas con más de 2 días de antigüedad.',
-      'En el campo "Fecha de Emisión" de SUNAT SOL deja la fecha de HOY (o máximo anteayer).',
-      'En la "Descripción" del servicio coloca la fecha real del consumo (PeñaFact lo añade automáticamente: "Cena Show Turístico (Consumo 05/11/2026 - Ref. Nota N-001)").',
-      'En PeñaFact guardas ambas fechas: "Fecha Consumo" (05/11) y "Fecha Emisión SUNAT" (hoy). Al organizar tus carpetas PDF eliges si ordenarlas por el día real del consumo o por el día de emisión.',
+      'El rechazo de fechas con más de 2 días de antigüedad es una validación nativa del sistema SUNAT.',
+      'Consigne en "Fecha de Emisión" la fecha vigente permitida dentro del periodo tributario mensual.',
+      'Incluya la fecha real de la operación dentro de la descripción del ítem (FactSunat Pro la agrega automáticamente).',
+      'En el módulo Archivo y Carpetas puede seleccionar si las carpetas se clasifican por Fecha de Operación/Nota o por Fecha de Emisión SUNAT.',
     ],
-    reglaOro: 'Confirma con el dueño o contador antes de emitir notas de semanas anteriores: se emiten con fecha de hoy dentro del mismo mes (antes del 30 de noviembre) referenciando la fecha real en la descripción.',
+    reglaOro: 'Confirme el criterio de fechas con el área contable antes de regularizar documentos acumulados al cierre de mes.',
   },
   {
     id: 'err-boleta-700',
-    titulo: '6. SUNAT me bloquea una Boleta de S/ 700.00 o más porque dice "Clientes Varios"',
+    titulo: '6. Boleta de Venta igual o superior a S/ 700.00 rechazada sin documento de identidad',
     gravedad: 'ALTA',
-    resumen: 'Por ley tributaria peruana, toda Boleta de Venta desde S/ 700.00 exige identificar al cliente.',
+    resumen: 'Según normativa SUNAT, toda Boleta de Venta desde S/ 700.00 requiere obligatoriamente identificar al cliente.',
     pasos: [
-      'Si el monto es S/ 700.00 o mayor, SUNAT exige elegir DNI, Pasaporte o Carnet de Extranjería y escribir el nombre completo.',
-      'Pregunta al dueño si tienen el DNI/Pasaporte del turista o del guía turístico de esa mesa.',
-      'OJO: verifica en la boleta de papel si realmente fue 1 sola cuenta o si juntaron 2 mesas/consumos distintos en un solo papel.',
-      'PeñaFact te avisa en ROJO antes de ir a SUNAT si detecta cualquier boleta ≥ S/ 700 sin documento.',
+      'Seleccione DNI (8 dígitos), Carnet de Extranjería o Pasaporte e ingrese los nombres y apellidos completos.',
+      'Verifique si el documento de origen corresponde a una sola operación o a consumos separados agrupados manualmente.',
+      'FactSunat Pro marca en rojo cualquier boleta ≥ S/ 700.00 incompleta antes de pasar a emisión.',
     ],
-    reglaOro: 'Nunca inventes números de DNI al azar (es falta tributaria). Siempre pide el dato al dueño o consulta cómo proceder.',
+    reglaOro: 'Nunca consigne documentos de identidad ficticios; solicite siempre el dato formal o consulte con contabilidad.',
   },
   {
     id: 'err-centimo-sol',
-    titulo: '7. En SUNAT el Total sale S/ 100.01 o S/ 99.99 en vez de S/ 100.00 exactos',
+    titulo: '7. Diferencia de ±S/ 0.01 en el Importe Total al ingresar datos en SUNAT SOL',
     gravedad: 'MEDIA',
-    resumen: 'Pasa cuando pegas un Valor Unitario redondeado a 2 decimales (ej. 84.75 × 1.18 = 100.005 → 100.01).',
+    resumen: 'Ocurre cuando se redondea el Valor Unitario a 2 decimales (ej. 84.75 × 1.18 = 100.005 → S/ 100.01).',
     pasos: [
-      'Vuelve a la pestaña "Calculadora IGV" o "Emitir SOL" de PeñaFact.',
-      'Presiona el botón amarillo "COPIAR" del campo "Valor Unitario EXACTO" (viene con 6 a 10 decimales, ej. 84.745763).',
-      'Pégalo completo en SUNAT SOL: verás que SUNAT redondea automáticamente a Base S/ 84.75 + IGV S/ 15.25 = S/ 100.00 EXACTO.',
+      'Utilice el botón "Copiar" del campo "Valor Unitario Exacto" en la Calculadora IGV o en Emisión SUNAT.',
+      'Pegue el valor completo con todos sus decimales (ej. 84.745763) en Portal SUNAT SOL.',
+      'SUNAT redondeará automáticamente la Base (S/ 84.75) y el IGV (S/ 15.25) para obtener S/ 100.00 exactos.',
     ],
-    reglaOro: 'Copia siempre el Valor Unitario EXACTO desde PeñaFact; nunca lo redondees a mano a 2 decimales.',
+    reglaOro: 'Copie siempre el Valor Unitario Exacto calculado por el sistema sin recortar decimales manualmente.',
   },
   {
     id: 'err-ruc-invalido',
-    titulo: '8. El RUC anotado en la boleta sale "Inválido", "Baja de Oficio" o "No Habido"',
+    titulo: '8. RUC rechazado, con estado "Baja de Oficio" o condición "No Habido"',
     gravedad: 'MEDIA',
-    resumen: 'Puede haber un número mal copiado a mano o la empresa ya dio de baja su RUC.',
+    resumen: 'Puede tratarse de un error de transcripción de dígitos o de un contribuyente inhabilitado en SUNAT.',
     pasos: [
-      'Si PeñaFact marca "Dígito verificador incorrecto": revisa la caligrafía de la nota (a veces un 3 parece 8, o un 1 parece 7).',
-      'Si en SUNAT el RUC aparece en estado "BAJA": NO se puede emitir factura a ese RUC. Avisa al dueño para pedir otro RUC vigente o emitir Boleta.',
-      'Si aparece "ACTIVO" pero "NO HABIDO": consúltalo con el dueño antes de emitir.',
+      'Si FactSunat Pro indica dígito verificador incorrecto, revise los 11 dígitos en el comprobante físico o constancia del cliente.',
+      'Si en SUNAT figura en estado "BAJA", no es procedente emitir Factura a ese RUC; solicite un RUC activo o emita Boleta según corresponda.',
+      'Si figura "ACTIVO" pero "NO HABIDO", consulte con administración antes de confirmar la emisión.',
     ],
-    reglaOro: 'Solo emite facturas con tranquilidad cuando SUNAT muestre el RUC como ACTIVO y HABIDO.',
+    reglaOro: 'Verifique que el contribuyente figure como ACTIVO y HABIDO antes de emitir facturas corporativas.',
   },
   {
     id: 'err-pdf-perdido',
-    titulo: '9. Emití una factura/boleta pero cerré la ventana sin descargar el PDF (o se fue el internet)',
+    titulo: '9. Recuperación de PDF no descargado o verificación ante corte de internet',
     gravedad: 'TIP',
-    resumen: 'En SUNAT nunca se pierde un comprobante emitido y puedes volver a bajar el PDF las veces que quieras.',
+    resumen: 'Todos los comprobantes emitidos permanecen almacenados en SUNAT y pueden descargarse nuevamente.',
     pasos: [
-      'En Portal SUNAT SOL entra a: Empresas → Comprobantes de Pago → SEE - SOL → Factura Electrónica (o Boleta) → Consultar Factura y Nota.',
-      'Coloca la fecha de hoy (Desde / Hasta) y presiona "Aceptar" (también te sirve para verificar si llegó a emitirse cuando se fue la luz/internet, evitando duplicados!).',
-      'Haz clic en el ícono de PDF de cada comprobante faltante para descargarlo de nuevo.',
-      'Luego arrástralo al "Organizador PDFs" de PeñaFact para que quede en su carpeta correspondiente.',
+      'En Portal SUNAT SOL ingrese a: SEE - SOL → Factura/Boleta Electrónica → Consultar Factura y Nota (o Boleta y Nota).',
+      'Filtre por el rango de fechas de emisión para confirmar qué comprobantes fueron aceptados y evitar duplicados.',
+      'Descargue nuevamente los archivos PDF faltantes y cárguelos en el módulo Archivo y Carpetas.',
     ],
-    reglaOro: 'Si se corta el internet justo al hacer clic en "Emitir", SIEMPRE consulta primero "Comprobantes Emitidos" antes de volver a emitir para no duplicar.',
+    reglaOro: 'Ante una interrupción de red durante la emisión, consulte siempre los comprobantes emitidos antes de reintentar.',
   },
   {
-    id: 'err-necesito-api',
-    titulo: '10. ¿Qué es eso de "API / Nubefact" que vi en la app? ¿Necesito pedirle contraseñas al dueño?',
+    id: 'err-api-opcional',
+    titulo: '10. Modo Portal SEE-SOL frente a Conexión API PSE/OSE (Opcional)',
     gravedad: 'TIP',
-    resumen: 'NO necesitas ninguna API, ni token, ni Clave SOL, ni contraseñas para trabajar mañana.',
+    resumen: 'La plataforma opera al 100% sin necesidad de claves, credenciales ni servicios API externos.',
     pasos: [
-      'Como el dueño te deja su laptop con el Portal SUNAT SOL ya iniciado, tú trabajas 100% en modo Portal SOL.',
-      'El módulo "API Directa" es solo una función extra opcional por si más adelante el dueño decide contratar un proveedor pagado (como Nubefact o Apisunat) para emitir sin entrar al Portal SUNAT.',
-      'Mañana simplemente ignora la sección API y usa: Calculadora IGV → Captura / Bandeja → Emitir SOL → Carpetas PDF.',
+      'En operación estándar con Portal SUNAT SEE-SOL, basta mantener abierta la sesión oficial de SUNAT en paralelo a FactSunat Pro.',
+      'El módulo de API Externa (Nubefact / Apisunat / REST) es completamente opcional para empresas que contraten un proveedor PSE/OSE.',
     ],
-    reglaOro: 'Tu trabajo de mañana funciona al 100% abriendo este enlace en Chrome/Edge al costado de la pestaña de SUNAT del dueño.',
+    reglaOro: 'Ninguna credencial de SUNAT se solicita ni almacena en esta plataforma.',
   },
 ];
 
-const CHECKLIST_MANANA = [
-  'Preguntar al dueño 3 cosas antes de empezar: ① ¿La tasa de IGV es 18% o 10.5% MYPE? ② ¿Las notas de días pasados se emiten con fecha de hoy poniendo la fecha real en la descripción? ③ ¿En qué carpeta de su laptop quiere que queden guardados los PDFs?',
-  'Abrir PeñaFact SUNAT PRO en una ventana (izquierda: tecla Windows + ←) y el Portal SUNAT SOL ya iniciado por el dueño en otra ventana (derecha: tecla Windows + →).',
-  'Configurar una sola vez en la pestaña "Configuración": tasa de IGV por defecto (18% o 10.5%) y nombre de la Peña.',
-  'Registrar las boletas escritas en "Captura Rápida" (o probar montos en "Calculadora IGV") y verificar en "Bandeja" con "Cuadre vs Boletas Físicas" que la diferencia sea S/ 0.00.',
-  'Ir a "Emitir SOL" e ir emitiendo uno por uno copiando con 1 clic el RUC, Descripción y Valor Unitario Exacto. Verificar el Preliminar en SUNAT, presionar Emitir y descargar el PDF.',
-  'Ir marcando cada boleta física de papel con un check (✓) y su Serie-Número apenas se emite para no duplicar ninguna.',
-  'Al terminar, abrir "Carpetas PDF", arrastrar TODOS los PDFs descargados de la carpeta Descargas y presionar "Guardar Carpetas Directo en la Laptop del Dueño".',
-  'Entregar al dueño: las carpetas ordenadas por Año/Mes/Semana/Día y por Empresa + el Excel Contable de 6 hojas + el Reporte Ejecutivo PDF.',
+const CHECKLIST_OPERATIVO = [
+  'Confirmar parámetros tributarios del periodo con administración/contabilidad: tasa de IGV vigente (18% general o 10.5% MYPE Ley 31556), criterio de fecha de emisión y carpeta destino de archivo.',
+  'Organizar el espacio de trabajo en pantalla dividida: FactSunat Pro a la izquierda (Windows + ←) y Portal SUNAT SEE-SOL a la derecha (Windows + →).',
+  'Configurar los datos de la empresa emisora y tasa por defecto en el módulo Configuración.',
+  'Registrar el lote de notas internas en Registro de Notas (o calcular individualmente en Calculadora IGV) y verificar en Bandeja y Cuadre que la diferencia contra el total físico sea S/ 0.00.',
+  'Procesar la cola de emisión en Emisión SUNAT copiando en 1 clic documento, descripción y Valor Unitario Exacto, validando el Preliminar en SUNAT antes de confirmar y descargar el PDF.',
+  'Registrar la Serie y Número emitidos en cada documento físico de respaldo para garantizar trazabilidad sin duplicados.',
+  'Cargar todos los PDFs descargados en Archivo y Carpetas y generar la estructura ordenada en disco local o ZIP junto con el Excel contable y el Reporte Ejecutivo PDF.',
 ];
 
 export const GuiaExpertoSunat: React.FC<GuiaExpertoSunatProps> = ({ onGoToTab }) => {
@@ -181,123 +177,120 @@ export const GuiaExpertoSunat: React.FC<GuiaExpertoSunatProps> = ({ onGoToTab })
 
   return (
     <div className="space-y-6">
-      {/* Cabecera */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-900 to-amber-950/30 border border-amber-500/30 rounded-2xl p-6 space-y-2">
-        <div className="text-xs font-extrabold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+      {/* Encabezado Ejecutivo */}
+      <div className="fs-card p-6 space-y-2">
+        <div className="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5" style={{ color: 'var(--accent-text)' }}>
           <BookOpen className="w-4 h-4" />
-          Manual Operativo Completo · Sin API ni Contraseñas · Nivel Contador Experto Perú
+          Procedimiento Estándar · Normativa SUNAT Perú (SEE-SOL y PSE/OSE)
         </div>
-        <h2 className="text-2xl font-extrabold text-white">
-          Guía Exacta Paso a Paso y Protocolo S.O.S. ante Cualquier Error en SUNAT
+        <h2 className="text-xl sm:text-2xl font-extrabold text-[var(--text-primary)]">
+          Guía Operativa Paso a Paso y Protocolo de Incidencias
         </h2>
-        <p className="text-sm text-slate-300 max-w-3xl">
-          Diseñada específicamente para trabajar mañana en la <strong>laptop del dueño (con SUNAT SOL ya iniciado)</strong>: qué hacer en orden exacto, cómo funciona cada pestaña de esta plataforma y qué hacer paso a paso si ocurre cualquier equivocación.
+        <p className="text-sm text-[var(--text-secondary)] max-w-3xl">
+          Referencia práctica para ejecutar el ciclo completo de cálculo de IGV, emisión en Portal SUNAT Operaciones en Línea y archivo documental estructurado sin errores.
         </p>
       </div>
 
-      {/* SECCIÓN 1: MAPA SIMPLE DE QUÉ HACE CADA PESTAÑA */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4">
-        <h3 className="text-base font-bold text-white flex items-center gap-2">
-          <Layers className="w-5 h-5 text-amber-400" />
-          1. ¿Cómo funciona esta plataforma? (Resumen de cada pestaña en 10 segundos)
+      {/* 1. Mapa de Módulos */}
+      <div className="fs-card p-5 space-y-4">
+        <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+          <Layers className="w-4 h-4" style={{ color: 'var(--accent-text)' }} />
+          1. Arquitectura del Flujo de Trabajo
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {[
             {
-              step: 'Paso A (Rápido)',
+              step: '01 · Cálculo',
               title: 'Calculadora IGV',
-              desc: 'Reemplaza la calculadora física. Pones 1 total (o sumas varios precios de la boleta) y te saca el Valor Unitario exacto sin IGV con el IGV adentro del total.',
-              tab: 'CALC' as const,
-              accent: 'border-amber-500/40 bg-amber-500/5',
+              desc: 'Desglose instantáneo de IGV incluido o adicional, sumador de múltiples ítems y comparador de tasas.',
+              tab: 'CALC' as NavTab,
             },
             {
-              step: 'Paso B (Registro)',
-              title: 'Captura Rápida',
-              desc: 'Transcribes rápido tus boletas escritas (Fecha, RUC/DNI/Varios, Total). El sistema calcula todo y te avisa si falta algún dato SUNAT.',
-              tab: 'CAPTURA' as const,
-              accent: 'border-slate-700 bg-slate-950/60',
+              step: '02 · Captura',
+              title: 'Registro de Notas',
+              desc: 'Transcripción rápida por teclado con validación RUC/DNI o carga masiva desde Excel y texto.',
+              tab: 'CAPTURA' as NavTab,
             },
             {
-              step: 'Paso C (Control)',
-              title: 'Bandeja',
-              desc: 'Ves todas tus notas juntas, verificas que la suma cuadre S/ 0.00 con las boletas físicas y puedes consolidar varias notas en 1 factura o cambiar % en lote.',
-              tab: 'BANDEJA' as const,
-              accent: 'border-slate-700 bg-slate-950/60',
+              step: '03 · Control',
+              title: 'Bandeja y Cuadre',
+              desc: 'Revisión global, cuadre físico exacto, consolidación de notas y actualización masiva de parámetros.',
+              tab: 'BANDEJA' as NavTab,
             },
             {
-              step: 'Paso D (En SUNAT)',
-              title: 'Emitir SOL',
-              desc: 'Te guía boleta por boleta al costado del Portal SUNAT SOL del dueño: solo presionas "Copiar" → pegas en SUNAT → emites → bajas el PDF.',
-              tab: 'EMISION' as const,
-              accent: 'border-emerald-500/40 bg-emerald-500/5',
+              step: '04 · SUNAT',
+              title: 'Emisión SUNAT',
+              desc: 'Asistente paso a paso para Portal SEE-SOL con copiado en 1 clic, más soporte opcional para API y XML UBL 2.1.',
+              tab: 'EMISION' as NavTab,
             },
             {
-              step: 'Paso E (Carpetas)',
-              title: 'Carpetas PDF',
-              desc: 'Arrastras TODOS los PDFs que bajaste de SUNAT: los lee solos, los renombra y crea las carpetas Año/Mes/Semana/Día + Por Empresa directo en la laptop del dueño.',
-              tab: 'CARPETAS' as const,
-              accent: 'border-sky-500/40 bg-sky-500/5',
+              step: '05 · Archivo',
+              title: 'Archivo y Carpetas',
+              desc: 'Lectura automática de PDFs SUNAT, renombrado limpio y creación directa de carpetas por fecha y cliente.',
+              tab: 'CARPETAS' as NavTab,
             },
             {
-              step: 'Paso F (Entrega)',
-              title: 'Reportes & Config',
-              desc: 'Descargas el Excel Contable de 6 hojas y el Reporte Ejecutivo PDF para entregarle el trabajo impecable al dueño.',
-              tab: 'DASHBOARD' as const,
-              accent: 'border-slate-700 bg-slate-950/60',
+              step: '06 · Cierre',
+              title: 'Reportes y Cierre',
+              desc: 'Consolidado tributario de Base e IGV por día, semana, mes y cliente + Excel contable de 6 hojas.',
+              tab: 'DASHBOARD' as NavTab,
             },
           ].map((card) => (
-            <div key={card.title} className={`p-4 rounded-xl border ${card.accent} flex flex-col justify-between gap-3`}>
+            <div key={card.title} className="fs-inset p-4 flex flex-col justify-between gap-3">
               <div>
-                <div className="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">
+                <div className="text-[10px] font-extrabold uppercase tracking-wider" style={{ color: 'var(--accent-text)' }}>
                   {card.step}
                 </div>
-                <div className="text-sm font-bold text-white mt-0.5">{card.title}</div>
-                <p className="text-xs text-slate-300 mt-1 leading-relaxed">{card.desc}</p>
+                <div className="text-sm font-bold text-[var(--text-primary)] mt-0.5">{card.title}</div>
+                <p className="text-xs text-[var(--text-secondary)] mt-1 leading-relaxed">{card.desc}</p>
               </div>
               <button
                 type="button"
                 onClick={() => onGoToTab(card.tab)}
-                className="cursor-pointer self-start text-xs font-bold text-amber-300 hover:text-amber-200 underline"
+                className="cursor-pointer self-start text-xs font-bold hover:underline"
+                style={{ color: 'var(--accent-text)' }}
               >
-                Abrir {card.title} →
+                Ir al módulo →
               </button>
             </div>
           ))}
         </div>
       </div>
 
-      {/* SECCIÓN 2: CHECKLIST INTERACTIVO EN ORDEN EXACTO PARA MAÑANA */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4">
+      {/* 2. Checklist Operativo Estándar */}
+      <div className="fs-card p-5 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-            2. Proceso Exacto en Orden para Mañana (Marca cada paso conforme avanzas)
+          <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" style={{ color: 'var(--sage-text)' }} />
+            2. Procedimiento Secuencial de Emisión y Archivo
           </h3>
-          <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-mono-num">
-            {completedCount} / {CHECKLIST_MANANA.length} completados
+          <span className="text-xs font-bold px-3 py-1 rounded-full fs-pill-sage font-mono-num">
+            {completedCount} / {CHECKLIST_OPERATIVO.length} completados
           </span>
         </div>
 
         <div className="space-y-2">
-          {CHECKLIST_MANANA.map((texto, idx) => {
+          {CHECKLIST_OPERATIVO.map((texto, idx) => {
             const done = Boolean(checkedSteps[idx]);
             return (
               <label
                 key={idx}
                 className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition ${
                   done
-                    ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-100'
-                    : 'bg-slate-950/70 border-slate-800 text-slate-200 hover:border-slate-700'
+                    ? 'fs-pill-sage'
+                    : 'bg-[var(--bg-inset)] border-[var(--border-soft)] text-[var(--text-primary)] hover:border-[var(--border-strong)]'
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={done}
                   onChange={() => toggleCheck(idx)}
-                  className="accent-emerald-500 mt-1 shrink-0 w-4 h-4"
+                  className="mt-1 shrink-0 w-4 h-4 accent-[var(--sage-bg)]"
                 />
                 <div className="text-xs sm:text-sm leading-relaxed">
-                  <span className="font-extrabold text-amber-400 mr-2">Paso {idx + 1}:</span>
+                  <span className="font-extrabold mr-2" style={{ color: 'var(--accent-text)' }}>
+                    Paso {idx + 1}:
+                  </span>
                   <span className={done ? 'line-through opacity-75' : ''}>{texto}</span>
                 </div>
               </label>
@@ -305,87 +298,87 @@ export const GuiaExpertoSunat: React.FC<GuiaExpertoSunatProps> = ({ onGoToTab })
           })}
         </div>
 
-        {/* Ruta Exacta dentro del Portal SUNAT SOL */}
-        <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/30 text-xs text-sky-100 space-y-2">
-          <div className="font-extrabold text-sky-300 flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4" />
-            Rutas exactas dentro del Portal SUNAT SOL (cuando ya está abierta la sesión del dueño):
+        <div className="p-4 rounded-xl fs-pill-sky text-xs space-y-1.5">
+          <div className="font-extrabold flex items-center gap-1.5">
+            <Info className="w-4 h-4" />
+            Rutas oficiales dentro del Portal SUNAT SEE-SOL:
           </div>
-          <ul className="space-y-1 list-disc list-inside text-slate-200">
+          <ul className="space-y-1 list-disc list-inside opacity-90">
             <li>
-              <strong>Emitir Factura (con RUC):</strong> Menú izquierdo → <code>Empresas</code> → <code>Comprobantes de Pago</code> → <code>SEE - SOL</code> → <code>Factura Electrónica</code> → <code>Emitir Factura</code>.
+              <strong>Factura Electrónica:</strong> Empresas → Comprobantes de Pago → SEE - SOL → Factura Electrónica → Emitir Factura.
             </li>
             <li>
-              <strong>Emitir Boleta (DNI / Pasaporte / Varios):</strong> <code>Empresas</code> → <code>Comprobantes de Pago</code> → <code>SEE - SOL</code> → <code>Boleta de Venta Electrónica</code> → <code>Emitir Boleta de Venta</code>.
+              <strong>Boleta de Venta Electrónica:</strong> Empresas → Comprobantes de Pago → SEE - SOL → Boleta de Venta Electrónica → Emitir Boleta de Venta.
             </li>
             <li>
-              <strong>Consultar o volver a bajar un PDF ya emitido:</strong> Dentro de <code>Factura Electrónica</code> o <code>Boleta de Venta Electrónica</code> → <code>Consultar Factura y Nota</code> / <code>Consultar Boleta de Venta y Nota</code>.
+              <strong>Reimpresión / Consulta de PDFs:</strong> Consultar Factura y Nota / Consultar Boleta de Venta y Nota.
             </li>
             <li>
-              <strong>Anular un comprobante equivocado:</strong> Dentro de <code>Factura Electrónica</code> o <code>Boleta de Venta Electrónica</code> → <code>Emitir Nota de Crédito</code>.
+              <strong>Anulación / Corrección:</strong> Emitir Nota de Crédito (dentro de Factura Electrónica o Boleta de Venta).
             </li>
           </ul>
         </div>
       </div>
 
-      {/* SECCIÓN 3: MANUAL S.O.S. — QUÉ HACER SI ME EQUIVOCO EN CADA SITUACIÓN */}
-      <div className="bg-slate-900/90 border border-rose-500/30 rounded-2xl p-5 space-y-4">
+      {/* 3. Protocolo de Resolución de Incidencias */}
+      <div className="fs-card p-5 space-y-4">
         <div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <LifeBuoy className="w-5 h-5 text-rose-400" />
-            3. Manual S.O.S. — ¿Qué Hacer Si Me Equivoco o Pasa un Problema? (10 Casos Reales)
+          <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+            <LifeBuoy className="w-4 h-4" style={{ color: 'var(--rose-text)' }} />
+            3. Protocolo S.O.S. — Resolución de Errores e Incidencias Frecuentes (10 Casos)
           </h3>
-          <p className="text-xs text-slate-400 mt-1">
-            Haz clic en cualquier situación para ver las instrucciones exactas sin pánico ni fallas. Todo en SUNAT tiene solución legal ordenada.
+          <p className="text-xs text-[var(--text-muted)] mt-1">
+            Seleccione cualquier escenario para consultar el procedimiento tributario correcto paso a paso.
           </p>
         </div>
 
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {EMERGENCY_CASES.map((caso) => {
             const isOpen = openCaseId === caso.id;
             return (
               <div
                 key={caso.id}
-                className={`rounded-xl border transition overflow-hidden ${
-                  isOpen
-                    ? 'border-amber-500/50 bg-slate-950'
-                    : 'border-slate-800 bg-slate-950/60 hover:border-slate-700'
-                }`}
+                className="rounded-xl border border-[var(--border-soft)] bg-[var(--bg-inset)] overflow-hidden transition"
               >
                 <button
                   type="button"
                   onClick={() => setOpenCaseId(isOpen ? '' : caso.id)}
-                  className="cursor-pointer w-full p-4 text-left flex items-center justify-between gap-3"
+                  className="cursor-pointer w-full p-4 text-left flex items-center justify-between gap-3 hover:bg-[var(--bg-hover)] transition"
                 >
                   <div className="flex items-start sm:items-center gap-2.5 min-w-0">
                     <span
                       className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full shrink-0 ${
                         caso.gravedad === 'ALTA'
-                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                          ? 'fs-pill-rose'
                           : caso.gravedad === 'MEDIA'
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                            : 'bg-sky-500/20 text-sky-300 border border-sky-500/40'
+                            ? 'fs-pill-peach'
+                            : 'fs-pill-sky'
                       }`}
                     >
-                      {caso.gravedad === 'ALTA' ? 'S.O.S.' : caso.gravedad === 'MEDIA' ? 'CUIDADO' : 'GUÍA'}
+                      {caso.gravedad === 'ALTA' ? 'CRÍTICO' : caso.gravedad === 'MEDIA' ? 'ATENCIÓN' : 'GUÍA'}
                     </span>
-                    <span className="text-xs sm:text-sm font-bold text-white">{caso.titulo}</span>
+                    <span className="text-xs sm:text-sm font-bold text-[var(--text-primary)]">
+                      {caso.titulo}
+                    </span>
                   </div>
                   {isOpen ? (
-                    <ChevronUp className="w-4 h-4 text-amber-400 shrink-0" />
+                    <ChevronUp className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
                   ) : (
-                    <ChevronDown className="w-4 h-4 text-slate-500 shrink-0" />
+                    <ChevronDown className="w-4 h-4 text-[var(--text-muted)] shrink-0" />
                   )}
                 </button>
 
                 {isOpen && (
-                  <div className="px-4 pb-4 pt-1 border-t border-slate-800/80 space-y-3 text-xs">
-                    <p className="text-slate-300 italic">{caso.resumen}</p>
-                    <ol className="space-y-1.5 text-slate-200 leading-relaxed">
+                  <div className="px-4 pb-4 pt-3 border-t border-[var(--border-soft)] bg-[var(--bg-card)] space-y-3 text-xs">
+                    <p className="text-[var(--text-secondary)] italic">{caso.resumen}</p>
+                    <ol className="space-y-1.5 text-[var(--text-primary)] leading-relaxed">
                       {caso.pasos.map((p, i) => (
-                        <li key={i} className={p.startsWith('  •') ? 'pl-5 text-amber-200' : 'flex gap-2'}>
+                        <li
+                          key={i}
+                          className={p.startsWith('  •') ? 'pl-5 font-medium text-[var(--text-secondary)]' : 'flex gap-2'}
+                        >
                           {!p.startsWith('  •') && (
-                            <span className="font-mono-num font-bold text-amber-400 shrink-0">
+                            <span className="font-mono-num font-bold shrink-0" style={{ color: 'var(--accent-text)' }}>
                               {i + 1}.
                             </span>
                           )}
@@ -393,10 +386,10 @@ export const GuiaExpertoSunat: React.FC<GuiaExpertoSunatProps> = ({ onGoToTab })
                         </li>
                       ))}
                     </ol>
-                    <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 flex gap-2">
-                      <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
+                    <div className="p-3 rounded-xl fs-pill-peach flex gap-2">
+                      <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
                       <div>
-                        <strong>Regla de oro:</strong> {caso.reglaOro}
+                        <strong>Criterio clave:</strong> {caso.reglaOro}
                       </div>
                     </div>
                   </div>
@@ -407,52 +400,44 @@ export const GuiaExpertoSunat: React.FC<GuiaExpertoSunatProps> = ({ onGoToTab })
         </div>
       </div>
 
-      {/* SECCIÓN 4: GLOSARIO SÚPER SIMPLE EN ESPAÑOL NORMAL */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3">
-        <h3 className="text-base font-bold text-white flex items-center gap-2">
-          <HelpCircle className="w-5 h-5 text-sky-400" />
-          4. Diccionario Rápido SUNAT (Para Entender Cada Campo sin Dudas)
+      {/* 4. Glosario Tributario */}
+      <div className="fs-card p-5 space-y-3">
+        <h3 className="text-sm font-bold text-[var(--text-primary)] flex items-center gap-2">
+          <HelpCircle className="w-4 h-4" style={{ color: 'var(--sky-text)' }} />
+          4. Glosario Rápido de Campos SUNAT
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
           {[
             {
-              term: 'Valor Unitario (en SUNAT SOL)',
-              def: 'Es el precio de 1 unidad SIN IGV. Es lo que te pide escribir SUNAT cuando agregas un ítem. PeñaFact te lo calcula exacto con decimales para que al sumarle IGV salga igual a tu boleta escrita.',
+              term: 'Valor Unitario (sin IGV)',
+              def: 'Precio base por unidad antes de impuestos. Es el valor requerido al agregar cada línea en Portal SUNAT SEE-SOL.',
             },
             {
               term: 'Op. Gravada (Subtotal)',
-              def: 'Es la suma de todos los ítems SIN IGV. Es el ingreso neto real antes del impuesto.',
+              def: 'Sumatoria de la base imponible afecta a IGV antes de aplicar el porcentaje tributario.',
             },
             {
-              term: 'IGV (18% o 10.5% MYPE 2026)',
-              def: 'Impuesto General a las Ventas. En Perú la tasa normal es 18%, y para restaurantes MYPE acogidos a la Ley 31556 en 2026 es 10.5% (8% IGV + 2.5% IPM).',
+              term: 'IGV (18% / 10.5% MYPE 2026)',
+              def: 'Impuesto General a las Ventas vigente en Perú: tasa general 18% o tasa especial MYPE Ley 31556 (10.5% durante 2026).',
             },
             {
               term: 'Importe Total',
-              def: 'Monto final que pagó el turista/agencia (Op. Gravada + IGV). Debe coincidir exactamente con el total de tu boleta física de papel.',
+              def: 'Monto final de la operación (Base Imponible + IGV + Otros cargos no gravados si correspondiera).',
             },
             {
-              term: 'Serie E001 vs EB01',
-              def: 'En Portal SUNAT SOL, las Facturas electrónicas llevan serie E001 y las Boletas de Venta llevan serie EB01.',
+              term: 'Series E001 y EB01',
+              def: 'Series asignadas por SUNAT en el Sistema de Emisión Electrónica SOL: E001 para Facturas y EB01 para Boletas de Venta.',
             },
             {
-              term: 'Contado vs Crédito',
-              def: 'Si el turista o agencia ya pagó ese día (efectivo, Yape, POS, transferencia), es CONTADO. Solo se pone CRÉDITO si pagarán en días/semanas posteriores (SUNAT pedirá fecha de vencimiento y cuota).',
+              term: 'Forma de Pago (Contado vs Crédito)',
+              def: 'Contado cuando la cancelación se realiza al momento de emisión; Crédito cuando existen cuotas y fechas de vencimiento futuras.',
             },
           ].map((g) => (
-            <div key={g.term} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
-              <div className="font-bold text-amber-300">{g.term}</div>
-              <p className="text-slate-300 mt-1 leading-relaxed">{g.def}</p>
+            <div key={g.term} className="fs-inset p-3.5">
+              <div className="font-bold text-[var(--text-primary)]">{g.term}</div>
+              <p className="text-[var(--text-secondary)] mt-1 leading-relaxed">{g.def}</p>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* Recordatorio final de tranquilidad */}
-      <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-xs text-emerald-200">
-        <AlertOctagon className="w-5 h-5 text-emerald-400 shrink-0" />
-        <div>
-          <strong>Consejo de experto para avanzar al doble de velocidad:</strong> primero transcribe un grupo de 10 o 15 boletas escritas (ej. una semana entera), cuadra la suma en <strong>Bandeja</strong>, luego emítelas seguidas en <strong>Emitir SOL</strong> y al final arrastra esos 15 PDFs de golpe a <strong>Carpetas PDF</strong>. Así nunca te mareas ni pierdes la cuenta.
         </div>
       </div>
     </div>

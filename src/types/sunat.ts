@@ -104,7 +104,7 @@ export interface ComprobanteRecord {
   /** Notas consolidadas si se agruparon varias boletas escritas en 1 comprobante */
   notasConsolidadas?: string[];
   tipoComprobante: TipoComprobante;
-  /** Fecha escrita en la boleta física de la peña (YYYY-MM-DD) */
+  /** Fecha de operación / consumo registrada en el documento interno (YYYY-MM-DD) */
   fechaConsumo: string;
   /** Fecha legal de emisión en SUNAT (YYYY-MM-DD) */
   fechaEmisionSunat: string;

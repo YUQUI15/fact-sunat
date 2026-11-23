@@ -47,7 +47,7 @@ function makeBaseRec(overrides: Partial<ComprobanteRecord> = {}): ComprobanteRec
       {
         id: 'i1',
         unidad: 'ZZ',
-        descripcion: 'Cena Show Turístico',
+        descripcion: 'Servicio Profesional',
         cantidad: 1,
         montoIngresado: 100,
         esTotalLinea: true,
@@ -84,7 +84,7 @@ describe('Motor Matemático SUNAT Perú (sunatMath)', () => {
         {
           id: 'i1',
           unidad: 'ZZ',
-          descripcion: 'Consumo Peña',
+          descripcion: 'Consumo General',
           cantidad: 1,
           montoIngresado: 250,
           esTotalLinea: true,
@@ -194,12 +194,12 @@ describe('Validadores Tributarios SUNAT Perú (sunatValidators)', () => {
 describe('Lector de PDFs SUNAT, Carpetas Multi-Nivel, Bulk y UBL XML', () => {
   it('extrae Serie, Fecha, RUC, Cliente y Totales desde texto de PDF Portal SUNAT SOL', () => {
     const samplePdfText = `
-      PEÑA SHOW LA CANDELARIA S.A.C.
+      CORPORACION COMERCIAL DEMO S.A.C.
       RUC: 20601234561
       FACTURA ELECTRÓNICA
       E001-000142
       Fecha de Emisión : 18/11/2026
-      Señor(es) : INCA TRAILS TOURS S.A.C.
+      Señor(es) : SERVICIOS LOGISTICOS ANDINOS S.A.C.
       RUC : 20131312955
       Tipo de Moneda : SOLES
       Sub Total Ventas : S/ 381.36
@@ -212,7 +212,7 @@ describe('Lector de PDFs SUNAT, Carpetas Multi-Nivel, Bulk y UBL XML', () => {
     expect(parsed.numero).toBe('142');
     expect(parsed.fechaEmision).toBe('2026-11-18');
     expect(parsed.docCliente).toBe('20131312955');
-    expect(parsed.razonSocialCliente).toBe('INCA TRAILS TOURS S.A.C.');
+    expect(parsed.razonSocialCliente).toBe('SERVICIOS LOGISTICOS ANDINOS S.A.C.');
     expect(parsed.total).toBe(450);
     expect(parsed.igv).toBe(68.64);
     expect(parsed.esOficialSunat).toBe(true);

@@ -78,7 +78,7 @@ export function parseBulkLines(rawText: string, config: EmpresaEmisoraConfig): B
     let tipoDocCliente: TipoDocIdentidad = '0';
     let numeroDocCliente = '-';
     let razonSocialCliente = 'CLIENTES VARIOS';
-    let descripcion = config.conceptosRapidos[0] || 'Consumo de Alimentos y Bebidas - Peña Show';
+    let descripcion = config.conceptosRapidos[0] || 'Consumo de Alimentos y Bebidas';
     let monto = NaN;
     const tasaIgv = config.tasaIgvDefecto;
 

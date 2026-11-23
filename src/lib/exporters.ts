@@ -270,7 +270,7 @@ export function downloadExcelContable(
 
 // =====================================================================
 // 2. GENERADOR DE CONSTANCIA INTERNA PDF (BORRADOR / HOJA DE TRABAJO)
-//    Y REPORTE EJECUTIVO PDF PARA EL DUEÑO
+//    Y REPORTE EJECUTIVO PDF CONSOLIDADO
 // =====================================================================
 export function generateConstanciaInternaPdfBlob(
   rec: ComprobanteRecord,
@@ -285,7 +285,7 @@ export function generateConstanciaInternaPdfBlob(
   doc.setTextColor(248, 250, 252);
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text(config.nombreComercial || config.razonSocial || 'PEÑA SHOW', 14, 13);
+  doc.text(config.nombreComercial || config.razonSocial || 'MI EMPRESA S.A.C.', 14, 13);
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.text(`RUC Emisor: ${config.ruc || 'PENDIENTE'}  |  ${config.direccion || 'Perú'}`, 14, 20);
@@ -499,7 +499,7 @@ export async function exportStructuredZip(
   opts: ExportArchiveOptions
 ): Promise<{ totalFiles: number; officialPdfs: number; draftPdfs: number }> {
   const zip = new JSZip();
-  const rootName = 'Facturacion_PenaShow_SUNAT';
+  const rootName = 'Comprobantes_SUNAT';
   const root = zip.folder(rootName)!;
 
   let totalFiles = 0;
@@ -552,12 +552,12 @@ export async function exportStructuredZip(
       null,
       2
     );
-    root.file(`00_Reportes_Contables/Respaldo_Portable_PenaFact_${dateStamp}.json`, backupJson);
+    root.file(`00_Reportes_Contables/Respaldo_FactSunat_${dateStamp}.json`, backupJson);
     totalFiles += 3;
   }
 
   const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE' });
-  triggerDownload(zipBlob, `Facturacion_PenaShow_${new Date().toISOString().slice(0, 10)}.zip`);
+  triggerDownload(zipBlob, `Archivo_Comprobantes_SUNAT_${new Date().toISOString().slice(0, 10)}.zip`);
 
   return { totalFiles, officialPdfs, draftPdfs };
 }
@@ -617,7 +617,7 @@ export async function exportDirectToDiskFolder(
   }
 
   const chosenDir = await picker({ mode: 'readwrite' });
-  const rootDir = await chosenDir.getDirectoryHandle('Facturacion_PenaShow_SUNAT', { create: true });
+  const rootDir = await chosenDir.getDirectoryHandle('Comprobantes_SUNAT', { create: true });
 
   let totalFiles = 0;
   let officialPdfs = 0;
@@ -669,11 +669,11 @@ export async function exportDirectToDiskFolder(
       null,
       2
     );
-    await writeFileToDir(repDir, `Respaldo_Portable_PenaFact_${dateStamp}.json`, backupJson);
+    await writeFileToDir(repDir, `Respaldo_FactSunat_${dateStamp}.json`, backupJson);
     totalFiles += 3;
   }
 
-  return { folderName: `${chosenDir.name}/Facturacion_PenaShow_SUNAT`, totalFiles, officialPdfs, draftPdfs };
+  return { folderName: `${chosenDir.name}/Comprobantes_SUNAT`, totalFiles, officialPdfs, draftPdfs };
 }
 
 export function triggerDownload(blob: Blob, fileName: string): void {

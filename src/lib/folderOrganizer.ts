@@ -182,7 +182,7 @@ export function buildFolderTreePreview(
   fechaBase: FechaBaseCarpeta
 ): FolderTreeNode {
   const root: FolderTreeNode = {
-    name: 'Facturacion_PenaShow_SUNAT',
+    name: 'Comprobantes_SUNAT',
     path: '',
     children: [],
     files: [],
