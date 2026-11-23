@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3,
+  BookOpen,
+  Calculator,
   CheckCircle2,
   FolderOutput,
   Info,
@@ -22,6 +24,8 @@ import {
   saveConfig,
 } from './lib/storage';
 import { calculateComprobante, formatFixed, roundSunat } from './lib/sunatMath';
+import { CalculadoraIGV } from './components/CalculadoraIGV';
+import { GuiaExpertoSunat } from './components/GuiaExpertoSunat';
 import { CapturaRapida } from './components/CapturaRapida';
 import { BandejaComprobantes } from './components/BandejaComprobantes';
 import { EstacionEmision } from './components/EstacionEmision';
@@ -29,10 +33,10 @@ import { OrganizadorCarpetas } from './components/OrganizadorCarpetas';
 import { DashboardResumen } from './components/DashboardResumen';
 import { ClientesConfig } from './components/ClientesConfig';
 
-type NavTab = 'CAPTURA' | 'BANDEJA' | 'EMISION' | 'CARPETAS' | 'DASHBOARD' | 'CONFIG';
+type NavTab = 'CALC' | 'GUIA' | 'CAPTURA' | 'BANDEJA' | 'EMISION' | 'CARPETAS' | 'DASHBOARD' | 'CONFIG';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<NavTab>('CAPTURA');
+  const [activeTab, setActiveTab] = useState<NavTab>('CALC');
   const [config, setConfig] = useState<EmpresaEmisoraConfig>(() => loadConfig());
   const [comprobantes, setComprobantes] = useState<ComprobanteRecord[]>(() => loadComprobantes());
   const [clientes, setClientes] = useState<ClienteFrecuente[]>(() => loadClientes());
@@ -115,12 +119,14 @@ export default function App() {
   };
 
   const navItems: Array<{ id: NavTab; label: string; icon: React.ReactNode; badge?: number }> = [
-    { id: 'CAPTURA', label: 'Captura Rápida', icon: <Zap className="w-3.5 h-3.5" /> },
+    { id: 'CALC', label: 'Calculadora IGV', icon: <Calculator className="w-3.5 h-3.5" /> },
+    { id: 'GUIA', label: 'Guía & S.O.S.', icon: <BookOpen className="w-3.5 h-3.5" /> },
+    { id: 'CAPTURA', label: 'Captura', icon: <Zap className="w-3.5 h-3.5" /> },
     { id: 'BANDEJA', label: 'Bandeja', icon: <ListChecks className="w-3.5 h-3.5" />, badge: quickStats.totalDocs },
-    { id: 'EMISION', label: 'Emitir SUNAT', icon: <Rocket className="w-3.5 h-3.5" />, badge: quickStats.pendientes },
-    { id: 'CARPETAS', label: 'Organizador PDFs', icon: <FolderOutput className="w-3.5 h-3.5" /> },
+    { id: 'EMISION', label: 'Emitir SOL', icon: <Rocket className="w-3.5 h-3.5" />, badge: quickStats.pendientes },
+    { id: 'CARPETAS', label: 'Carpetas PDF', icon: <FolderOutput className="w-3.5 h-3.5" /> },
     { id: 'DASHBOARD', label: 'Reportes', icon: <BarChart3 className="w-3.5 h-3.5" /> },
-    { id: 'CONFIG', label: 'Configuración', icon: <Settings className="w-3.5 h-3.5" /> },
+    { id: 'CONFIG', label: 'Config', icon: <Settings className="w-3.5 h-3.5" /> },
   ];
 
   return (
@@ -230,6 +236,23 @@ export default function App() {
 
       {/* Contenido Principal */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6">
+        {activeTab === 'CALC' && (
+          <CalculadoraIGV
+            config={config}
+            comprobantesCount={comprobantes.length}
+            onSendToBandeja={(rec) => {
+              setComprobantes((prev) => [rec, ...prev]);
+              setActiveTab('BANDEJA');
+            }}
+            onOpenGuia={() => setActiveTab('GUIA')}
+            onNotify={notify}
+          />
+        )}
+
+        {activeTab === 'GUIA' && (
+          <GuiaExpertoSunat onGoToTab={(tab) => setActiveTab(tab)} />
+        )}
+
         {activeTab === 'CAPTURA' && (
           <CapturaRapida
             config={config}

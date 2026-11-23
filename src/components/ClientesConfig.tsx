@@ -362,8 +362,11 @@ export const ClientesConfig: React.FC<ClientesConfigProps> = ({
           <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4">
             <h3 className="text-sm font-bold text-sky-300 flex items-center gap-2">
               <CloudLightning className="w-4 h-4" />
-              Conexión API de Facturación Electrónica (Opcional — Emisión Masiva)
+              Conexión API Externa (Opcional — NO necesaria si usas el Portal SUNAT SOL del dueño)
             </h3>
+            <p className="text-[11px] text-slate-400">
+              Deja esto vacío si mañana emites desde la sesión de Portal SUNAT SOL ya abierta en la laptop del dueño. Solo se configura si la empresa contrata en el futuro un proveedor pagado (Nubefact / Apisunat).
+            </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>

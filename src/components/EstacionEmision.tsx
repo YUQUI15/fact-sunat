@@ -290,10 +290,10 @@ export const EstacionEmision: React.FC<EstacionEmisionProps> = ({
         <div>
           <h2 className="text-xl font-bold text-white flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-emerald-400" />
-            Estación de Emisión SUNAT (Cero Errores)
+            Estación de Emisión SUNAT (Sin API ni Contraseñas)
           </h2>
           <p className="text-sm text-slate-400">
-            Emite uno por uno en Portal SUNAT SOL copiando en 1 clic sin descuadres, o dispara emisión masiva directa por API.
+            Trabaja directo al costado del <strong>Portal SUNAT SOL ya iniciado en la laptop del dueño</strong>: copias en 1 clic sin descuadres de céntimos y registras el PDF.
           </p>
         </div>
 
@@ -301,21 +301,22 @@ export const EstacionEmision: React.FC<EstacionEmisionProps> = ({
           <button
             type="button"
             onClick={() => setModo('PORTAL_SOL')}
-            className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition ${
+            className={`cursor-pointer px-3.5 py-2 rounded-lg text-sm font-semibold transition ${
               modo === 'PORTAL_SOL' ? 'bg-emerald-500 text-slate-950' : 'text-slate-300 hover:text-white'
             }`}
           >
-            Portal SUNAT SOL (Clave SOL)
+            Portal SUNAT SOL (Recomendado Mañana)
           </button>
           <button
             type="button"
             onClick={() => setModo('API_MASIVA')}
-            className={`px-3.5 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-1.5 ${
-              modo === 'API_MASIVA' ? 'bg-sky-500 text-slate-950' : 'text-slate-300 hover:text-white'
+            className={`cursor-pointer px-3.5 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ${
+              modo === 'API_MASIVA' ? 'bg-sky-500 text-slate-950' : 'text-slate-400 hover:text-white'
             }`}
+            title="Opcional: solo si el dueño contrata en el futuro una API externa como Nubefact"
           >
-            <CloudLightning className="w-4 h-4" />
-            API Directa / XML UBL 2.1
+            <CloudLightning className="w-3.5 h-3.5" />
+            API Externa (Opcional futuro)
           </button>
         </div>
       </div>
