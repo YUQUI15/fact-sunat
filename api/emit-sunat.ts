@@ -10,8 +10,11 @@ interface Res extends ServerResponse {
 
 function sendJson(res: Res, status: number, payload: unknown) {
   if (typeof res.status === 'function' && typeof res.json === 'function') {
-    res.status(status).json(payload);
-    return;
+    const nextRes = res.status(status);
+    if (typeof nextRes.json === 'function') {
+      nextRes.json(payload);
+      return;
+    }
   }
   res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
