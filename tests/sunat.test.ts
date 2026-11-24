@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   calculateComprobante,
+  evaluateSafeMathExpr,
   numeroALetrasSunat,
   roundSunat,
+  simulateSunatDecimals,
 } from '../src/lib/sunatMath';
 import {
   validarComprobanteSunat,
@@ -149,6 +151,27 @@ describe('Motor Matemático SUNAT Perú (sunatMath)', () => {
     expect(numeroALetrasSunat(100, 'PEN')).toBe('SON: CIEN Y 00/100 SOLES');
     expect(numeroALetrasSunat(250.5, 'PEN')).toBe('SON: DOSCIENTOS CINCUENTA Y 50/100 SOLES');
     expect(numeroALetrasSunat(1000, 'USD')).toBe('SON: MIL Y 00/100 DÓLARES AMERICANOS');
+  });
+
+  it('evalúa expresiones matemáticas de calculadora y simula cuadre con 2, 3, 4 y 6 decimales', () => {
+    expect(evaluateSafeMathExpr('120 + 85 + 45')).toBe(250);
+    expect(evaluateSafeMathExpr('3 * 80 + 25')).toBe(265);
+    expect(evaluateSafeMathExpr('(50 + 30) * 2')).toBe(160);
+
+    const vu100 = 100 / 1.18;
+    const chk2 = simulateSunatDecimals(vu100, 1, 0.18, 100, 2);
+    const chk3 = simulateSunatDecimals(vu100, 1, 0.18, 100, 3);
+    const chk4 = simulateSunatDecimals(vu100, 1, 0.18, 100, 4);
+    const chk6 = simulateSunatDecimals(vu100, 1, 0.18, 100, 6);
+
+    expect(chk2.cuadraExacto).toBe(false);
+    expect(chk2.totalSunat).toBe(100.01);
+    expect(chk3.vuStr).toBe('84.746');
+    expect(chk3.cuadraExacto).toBe(true);
+    expect(chk4.vuStr).toBe('84.7458');
+    expect(chk4.cuadraExacto).toBe(true);
+    expect(chk6.vuStr).toBe('84.745763');
+    expect(chk6.cuadraExacto).toBe(true);
   });
 });
 

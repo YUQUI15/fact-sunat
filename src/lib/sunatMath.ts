@@ -33,15 +33,128 @@ export function formatFixed(value: number, decimals = 2): string {
 }
 
 /**
+ * Evalúa expresiones matemáticas básicas de calculadora (+, -, *, /, paréntesis) de forma segura sin eval().
+ * Ejemplo: "120 + 85 + 45" -> 250, "3 * 80 + 25" -> 265.
+ */
+export function evaluateSafeMathExpr(raw: string): number {
+  const normalized = (raw || '')
+    .replace(/,/g, '.')
+    .replace(/[xX×]/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/\s+/g, '');
+  if (!normalized) return 0;
+  // Solo permitir dígitos, puntos, operadores básicos y paréntesis
+  if (!/^[0-9+\-*/().]+$/.test(normalized)) {
+    const fallback = parseFloat(normalized.replace(/[^0-9.]/g, ''));
+    return Number.isFinite(fallback) ? fallback : 0;
+  }
+
+  // Tokenizador + parser descendente recursivo (shunting-yard / Pratt simple)
+  const tokens = normalized.match(/\d*\.?\d+|[+\-*/()]/g);
+  if (!tokens) return 0;
+  let pos = 0;
+
+  const parseExpr = (): number => {
+    let val = parseTerm();
+    while (pos < tokens.length && (tokens[pos] === '+' || tokens[pos] === '-')) {
+      const op = tokens[pos++];
+      const rhs = parseTerm();
+      val = op === '+' ? val + rhs : val - rhs;
+    }
+    return val;
+  };
+
+  const parseTerm = (): number => {
+    let val = parseFactor();
+    while (pos < tokens.length && (tokens[pos] === '*' || tokens[pos] === '/')) {
+      const op = tokens[pos++];
+      const rhs = parseFactor();
+      val = op === '*' ? val * rhs : rhs !== 0 ? val / rhs : 0;
+    }
+    return val;
+  };
+
+  const parseFactor = (): number => {
+    if (tokens[pos] === '+') {
+      pos++;
+      return parseFactor();
+    }
+    if (tokens[pos] === '-') {
+      pos++;
+      return -parseFactor();
+    }
+    if (tokens[pos] === '(') {
+      pos++;
+      const val = parseExpr();
+      if (tokens[pos] === ')') pos++;
+      return val;
+    }
+    const num = parseFloat(tokens[pos++] || '0');
+    return Number.isFinite(num) ? num : 0;
+  };
+
+  const result = parseExpr();
+  return Number.isFinite(result) && result >= 0 ? result : 0;
+}
+
+export interface DecimalPrecisionCheck {
+  decimals: number;
+  vu: number;
+  vuStr: string;
+  valorVentaExact: number;
+  valorVenta2: number;
+  igvExact: number;
+  igv2: number;
+  totalSunat: number;
+  cuadraExacto: boolean;
+  diferencia: number;
+}
+
+/**
+ * Simula exactamente cómo calcula y redondea Portal SUNAT SEE-SOL para una precisión de N decimales.
+ */
+export function simulateSunatDecimals(
+  exactValorUnitario: number,
+  cantidad: number,
+  tasaDecimal: number,
+  targetTotalLinea: number,
+  decimals: number
+): DecimalPrecisionCheck {
+  const safeQty = cantidad > 0 ? cantidad : 1;
+  const vu = roundSunat(exactValorUnitario, decimals);
+  const vuStr = vu.toFixed(decimals);
+  const valorVentaExact = vu * safeQty;
+  const valorVenta2 = roundSunat(valorVentaExact, 2);
+  const igvExact = valorVentaExact * tasaDecimal;
+  const igv2 = roundSunat(igvExact, 2);
+  const totalSunat = roundSunat(valorVenta2 + igv2, 2);
+  const diferencia = roundSunat(totalSunat - targetTotalLinea, 2);
+
+  return {
+    decimals,
+    vu,
+    vuStr,
+    valorVentaExact,
+    valorVenta2,
+    igvExact,
+    igv2,
+    totalSunat,
+    cuadraExacto: Math.abs(diferencia) < 0.001,
+    diferencia,
+  };
+}
+
+/**
  * Formatea el Valor Unitario para copiar y pegar en Portal SUNAT SOL.
- * Encuentra el menor número de decimales (2, 4, 6, 8 o 10) que al aplicarse la fórmula de SUNAT
- * reproduce EXACTAMENTE el total objetivo al céntimo.
+ * Usa al menos 4 decimales (4, 6, 8 o 10) salvo cuando el valor exacto ya es entero/2 dec exactos,
+ * garantizando cuadre exacto al céntimo en SUNAT SEE-SOL.
  */
 export function findOptimalValorUnitarioForSunat(
   exactValorUnitario: number,
   cantidad: number,
   tasaDecimal: number,
-  targetTotalLinea: number
+  targetTotalLinea: number,
+  minDecimals = 4
 ): {
   valorUnitarioOptimo: number;
   valorUnitarioStr: string;
@@ -50,77 +163,55 @@ export function findOptimalValorUnitarioForSunat(
 } {
   const safeQty = cantidad > 0 ? cantidad : 1;
   if (tasaDecimal <= 0) {
-    const vu = roundSunat(exactValorUnitario, 6);
-    const trimmed = trimTrailingZeros(vu, 2, 6);
+    const vu = roundSunat(exactValorUnitario, Math.max(minDecimals, 4));
     const simulated = roundSunat(vu * safeQty, 2);
     return {
       valorUnitarioOptimo: vu,
-      valorUnitarioStr: trimmed,
+      valorUnitarioStr: vu.toFixed(minDecimals),
       cuadraExacto: Math.abs(simulated - targetTotalLinea) < 0.001,
     };
   }
 
-  // Probamos de menor a mayor precisión (2, 4, 6, 8, 10 decimales).
-  // Portal SUNAT SOL calcula:
-  //   ValorVenta = round(VU * cant, 2)
-  //   IGV        = round(VU * cant * tasa, 2)  (y algunas pantallas usan round(ValorVenta * tasa, 2))
-  //   Total      = ValorVenta + IGV
-  const precisions = [2, 4, 6, 8, 10];
-  let bestStrictMatch: { vu: number; dec: number } | null = null;
+  // Evaluamos precisiones desde minDecimals (por defecto 4) hacia arriba: [4, 6, 8, 10]
+  const basePrecisions = [3, 4, 6, 8, 10].filter((d) => d >= minDecimals);
+  const precisions = basePrecisions.length ? basePrecisions : [4, 6, 8, 10];
   let bestSolMatch: { vu: number; dec: number } | null = null;
 
   for (const dec of precisions) {
-    const candidate = roundSunat(exactValorUnitario, dec);
-    const subExact = candidate * safeQty;
-    const valorVenta2 = roundSunat(subExact, 2);
-    const igvFromExact = roundSunat(subExact * tasaDecimal, 2);
-    const igvFromBase = roundSunat(valorVenta2 * tasaDecimal, 2);
-
-    const totalExact = roundSunat(valorVenta2 + igvFromExact, 2);
-    const totalFromBase = roundSunat(valorVenta2 + igvFromBase, 2);
-
-    if (
-      Math.abs(totalExact - targetTotalLinea) < 0.001 &&
-      Math.abs(totalFromBase - targetTotalLinea) < 0.001
-    ) {
-      bestStrictMatch = { vu: candidate, dec };
+    const check = simulateSunatDecimals(
+      exactValorUnitario,
+      safeQty,
+      tasaDecimal,
+      targetTotalLinea,
+      dec
+    );
+    if (check.cuadraExacto) {
+      bestSolMatch = { vu: check.vu, dec };
       break;
     }
-
-    if (!bestSolMatch && Math.abs(totalExact - targetTotalLinea) < 0.001) {
-      bestSolMatch = { vu: candidate, dec };
-    }
-  }
-
-  if (bestStrictMatch) {
-    return {
-      valorUnitarioOptimo: bestStrictMatch.vu,
-      valorUnitarioStr: trimTrailingZeros(bestStrictMatch.vu, 2, bestStrictMatch.dec),
-      cuadraExacto: true,
-    };
   }
 
   if (bestSolMatch) {
-    // Ej. S/ 100.00 al 18%: con 2 dec (84.75) -> 84.75*0.18=15.255 -> 15.26 -> 100.01!
-    // Pero con 10 dec (84.7457627119) -> subExact*0.18 = 15.2542 -> 15.25 -> 84.75 + 15.25 = 100.00!
-    const dec = Math.max(bestSolMatch.dec, 6);
-    const vu = roundSunat(exactValorUnitario, dec);
+    const isExactAt2 = Math.abs(exactValorUnitario - roundSunat(exactValorUnitario, 2)) < 1e-8;
+    const decToShow = isExactAt2 ? Math.min(2, minDecimals) : bestSolMatch.dec;
     return {
-      valorUnitarioOptimo: vu,
-      valorUnitarioStr: trimTrailingZeros(vu, 2, dec),
+      valorUnitarioOptimo: bestSolMatch.vu,
+      valorUnitarioStr: bestSolMatch.vu.toFixed(Math.max(decToShow, isExactAt2 ? 2 : minDecimals)),
       cuadraExacto: true,
       notaRedondeo:
-        'Usa este Valor Unitario con todos sus decimales en Portal SUNAT SOL para evitar el clásico descuadre de ±S/ 0.01.',
+        bestSolMatch.dec >= 4
+          ? `Usa ${bestSolMatch.dec} decimales en Portal SUNAT SOL para evitar diferencias de ±S/ 0.01.`
+          : undefined,
     };
   }
 
   const fallback = roundSunat(exactValorUnitario, 10);
   return {
     valorUnitarioOptimo: fallback,
-    valorUnitarioStr: trimTrailingZeros(fallback, 2, 10),
+    valorUnitarioStr: fallback.toFixed(6),
     cuadraExacto: false,
     notaRedondeo:
-      'Verifica el total final en pantalla SUNAT; si difiere en S/ 0.01 por redondeo tributario, ajusta 0.0001 en el valor unitario.',
+      'Verifica el total final en pantalla SUNAT; si difiere en S/ 0.01 por redondeo tributario, prueba con 6 u 8 decimales.',
   };
 }
 
