@@ -12,6 +12,7 @@ import {
   validarRucPeru,
 } from '../src/lib/sunatValidators';
 import { parseSunatText } from '../src/lib/sunatPdfParser';
+import { auditSunatPdfBatch, buildCorrectedComprobanteFromAudit } from '../src/lib/pdfAuditor';
 import {
   buildCleanPdfFileName,
   getFechaJerarquia,
@@ -271,5 +272,77 @@ describe('Lector de PDFs SUNAT, Carpetas Multi-Nivel, Bulk y UBL XML', () => {
     const xml = generateUbl21Xml(makeBaseRec(), DEFAULT_CONFIG);
     expect(xml).toContain('<cbc:UBLVersionID>2.1</cbc:UBLVersionID>');
     expect(xml).toContain('<cbc:PayableAmount currencyID="PEN">100.00</cbc:PayableAmount>');
+  });
+
+  it('audita PDFs SUNAT para detectar facturas a S/ 5.00/und vs S/ 25.00/und y genera reemplazos corregidos', () => {
+    const pdfMaloText = `
+      MI EMPRESA S.A.C.
+      RUC: 20601234561
+      FACTURA ELECTRÓNICA
+      E001-145
+      Fecha de Emisión : 22/11/2026
+      Señor(es) : CORPORACION COMERCIAL DEL PERU S.A.C.
+      RUC : 20100047218
+      Tipo de Moneda : SOLES
+      Cantidad Unidad Medida Descripción Valor Unitario
+      10.00 UNIDAD SERVICIO DE ATENCION GENERAL 4.2373
+      Sub Total Ventas : S/ 42.37
+      IGV : S/ 7.63
+      Importe Total : S/ 50.00
+    `;
+    const pdfBuenoText = `
+      MI EMPRESA S.A.C.
+      RUC: 20601234561
+      FACTURA ELECTRÓNICA
+      E001-146
+      Fecha de Emisión : 22/11/2026
+      Señor(es) : SERVICIOS LOGISTICOS ANDINOS S.A.C.
+      RUC : 20131312955
+      Tipo de Moneda : SOLES
+      Cantidad Unidad Medida Descripción Valor Unitario
+      10.00 UNIDAD SERVICIO DE ATENCION GENERAL 21.1864
+      Sub Total Ventas : S/ 211.86
+      IGV : S/ 38.14
+      Importe Total : S/ 250.00
+    `;
+
+    const parsedMalo = parseSunatText(pdfMaloText, 'PDF-FACTURA-E001-145.pdf');
+    const parsedBueno = parseSunatText(pdfBuenoText, 'PDF-FACTURA-E001-146.pdf');
+
+    expect(parsedMalo.items).toHaveLength(1);
+    expect(parsedMalo.items[0].cantidad).toBe(10);
+    expect(parsedMalo.items[0].precioUnitarioConIgv).toBeCloseTo(5.0, 2);
+
+    const rules = {
+      modoPrecio: 'CERCANO_A' as const,
+      precioErroneoObjetivo: 5,
+      tolerancia: 0.35,
+      precioMinimo: 20,
+      precioMaximo: 5000,
+      precioCorrectoReemplazo: 25,
+      precioCorrectoIncluyeIgv: true,
+      palabraClaveFiltro: '',
+      verificarReglasSunat: true,
+    };
+
+    const audit = auditSunatPdfBatch(
+      [
+        { id: '1', parsed: parsedMalo },
+        { id: '2', parsed: parsedBueno },
+      ],
+      rules
+    );
+
+    expect(audit[0].tieneError).toBe(true);
+    expect(audit[0].parsed.serieNumero).toBe('E001-000145');
+    expect(audit[0].correccion?.nuevoValorUnitarioExacto).toBe('21.1864');
+    expect(audit[0].correccion?.nuevoTotal).toBe(250);
+    expect(audit[0].correccion?.diferenciaTotal).toBe(200);
+    expect(audit[1].tieneError).toBe(false);
+
+    const replacement = buildCorrectedComprobanteFromAudit(audit[0], DEFAULT_CONFIG, rules);
+    expect(replacement.numeroDocCliente).toBe('20100047218');
+    expect(replacement.items[0].cantidad).toBe(10);
+    expect(replacement.items[0].montoIngresado).toBe(25);
   });
 });

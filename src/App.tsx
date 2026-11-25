@@ -4,6 +4,7 @@ import {
   BookOpen,
   Calculator,
   CheckCircle2,
+  FileSearch,
   FolderOutput,
   Info,
   ListChecks,
@@ -37,6 +38,7 @@ import { CapturaRapida } from './components/CapturaRapida';
 import { BandejaComprobantes } from './components/BandejaComprobantes';
 import { EstacionEmision } from './components/EstacionEmision';
 import { OrganizadorCarpetas } from './components/OrganizadorCarpetas';
+import { AuditoriaPdfs } from './components/AuditoriaPdfs';
 import { DashboardResumen } from './components/DashboardResumen';
 import { ClientesConfig } from './components/ClientesConfig';
 
@@ -46,6 +48,7 @@ export type NavTab =
   | 'BANDEJA'
   | 'EMISION'
   | 'CARPETAS'
+  | 'AUDITORIA'
   | 'DASHBOARD'
   | 'GUIA'
   | 'CONFIG';
@@ -189,8 +192,15 @@ export default function App() {
       icon: <FolderOutput className="w-4 h-4" />,
     },
     {
-      id: 'DASHBOARD',
+      id: 'AUDITORIA',
       num: '06',
+      label: 'Auditoría PDF / NC',
+      sub: 'Detectar errores y anular',
+      icon: <FileSearch className="w-4 h-4" />,
+    },
+    {
+      id: 'DASHBOARD',
+      num: '07',
       label: 'Reportes y Cierre',
       sub: 'KPIs, IGV y auditoría',
       icon: <BarChart3 className="w-4 h-4" />,
@@ -546,6 +556,17 @@ export default function App() {
                   const merged = prev.map((c) => map.get(c.id) || c);
                   return [...createdList, ...merged];
                 });
+              }}
+              onNotify={notify}
+            />
+          )}
+
+          {activeTab === 'AUDITORIA' && (
+            <AuditoriaPdfs
+              config={config}
+              onSendCorrectedToBandeja={(nuevos) => {
+                setComprobantes((prev) => [...nuevos, ...prev]);
+                setActiveTab('BANDEJA');
               }}
               onNotify={notify}
             />
